@@ -1,27 +1,47 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <FormMetadata>
-    <Form name="测试表单">
-        <FieldList>
-            <TextField name="测试增量元数据" Length="500" Left="10" Top="10" Width="400" Height="100" VisibleExt="111">
-                <Validation>
-                    <Required>1</Required>
-                </Validation>
-            </TextField>
-            <ComboBox name="付款方式" Left="10" Top="120" Width="200" Height="30" VisibleExt="111">
-                <Options>
-                    <Option>现金</Option>
-                    <Option>转账</Option>
-                    <Option>承兑</Option>
-                </Options>
-            </ComboBox>
-            <MoneyField name="金额" Length="10" Left="10" Top="160" Width="200" Height="30" VisibleExt="111">
-                <Validation>
-                    <Required>1</Required>
-                    <Number>1</Number>
-                </Validation>
-            </MoneyField>
-            <TextField name="订单编号" Length="50" Left="220" Top="120" Width="200" Height="30" VisibleExt="111"/>
-            <TextField name="供应商名称" Length="100" Left="220" Top="160" Width="200" Height="30" VisibleExt="111"/>
-        </FieldList>
-    </Form>
+    <Modules>
+        <Module name="采购管理">
+            <Forms>
+                <Form name="采购订单">
+                    <FieldList>
+                        <TextField name="订单编号" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" />
+                        <TextField name="供应商名称" Left="10" Top="50" Width="200" Height="30" VisibleExt="111" Length="200" />
+                        <ComboBox name="付款方式" Left="10" Top="90" Width="200" Height="30" VisibleExt="111">
+                            <Options>
+                                <Option>选项1</Option>
+                                <Option>选项2</Option>
+                            </Options>
+                        </ComboBox>
+                        <MoneyField name="金额" Left="10" Top="130" Width="200" Height="30" VisibleExt="111" Length="10" />
+                    </FieldList>
+                </Form>
+                <Form name="采购入库">
+                    <FieldList>
+                        <TextField name="入库单号" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" />
+                        <TextField name="供应商名称" Left="10" Top="50" Width="200" Height="30" VisibleExt="111" Length="200" />
+                        <TextField name="商品名称" Left="10" Top="90" Width="200" Height="30" VisibleExt="111" Length="200" />
+                        <MoneyField name="入库金额" Left="10" Top="130" Width="200" Height="30" VisibleExt="111" Length="10" />
+                    </FieldList>
+                </Form>
+            </Forms>
+        </Module>
+        <Module name="销售管理">
+            <Forms>
+                <Form name="销售订单">
+                    <FieldList>
+                        <TextField name="订单编号" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" />
+                        <TextField name="客户名称" Left="10" Top="50" Width="200" Height="30" VisibleExt="111" Length="200" />
+                        <ComboBox name="付款方式" Left="10" Top="90" Width="200" Height="30" VisibleExt="111">
+                            <Options>
+                                <Option>选项1</Option>
+                                <Option>选项2</Option>
+                            </Options>
+                        </ComboBox>
+                        <MoneyField name="金额" Left="10" Top="130" Width="200" Height="30" VisibleExt="111" Length="10" />
+                    </FieldList>
+                </Form>
+            </Forms>
+        </Module>
+    </Modules>
 </FormMetadata>

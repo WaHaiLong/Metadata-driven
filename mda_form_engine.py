@@ -11,16 +11,75 @@ class MDAFormEngine:
         self.field_widgets = {}
         self.root = None
         self.form_frame = None
+        self.modules = {}
+        self.current_module = None
+        self.current_form = None
+        self.form_name = "测试表单"
         self.load_metadata()
     
     def load_metadata(self):
         tree = ET.parse(self.metadata_file)
         root = tree.getroot()
-        form = root.find('Form')
-        self.form_name = form.get('name')
-        field_list = form.find('FieldList')
         
-        for field_elem in field_list:
+        # 检查是否有Modules节点（新格式）
+        modules_elem = root.find('Modules')
+        if modules_elem:
+            self.load_modules(modules_elem)
+        else:
+            # 向后兼容：旧格式
+            form = root.find('Form')
+            if form:
+                self.form_name = form.get('name')
+                self.load_fields(form.find('FieldList'))
+    
+    def load_modules(self, modules_elem):
+        """加载模块结构"""
+        for module_elem in modules_elem.findall('Module'):
+            module_name = module_elem.get('name')
+            self.modules[module_name] = {}
+            
+            forms_elem = module_elem.find('Forms')
+            if forms_elem:
+                for form_elem in forms_elem.findall('Form'):
+                    form_name = form_elem.get('name')
+                    self.modules[module_name][form_name] = {
+                        'fields': {}
+                    }
+                    
+                    field_list = form_elem.find('FieldList')
+                    if field_list:
+                        for field_elem in field_list:
+                            field_type = field_elem.tag
+                            field_name = field_elem.get('name')
+                            field_info = {
+                                'type': field_type,
+                                'left': int(field_elem.get('Left', 10)),
+                                'top': int(field_elem.get('Top', 10)),
+                                'width': int(field_elem.get('Width', 200)),
+                                'height': int(field_elem.get('Height', 30)),
+                                'visible_ext': field_elem.get('VisibleExt', '111')
+                            }
+                            
+                            if field_type == 'TextField':
+                                field_info['length'] = int(field_elem.get('Length', 200))
+                            elif field_type == 'ComboBox':
+                                field_info['options'] = [opt.text for opt in field_elem.find('Options').findall('Option')]
+                            elif field_type == 'MoneyField':
+                                field_info['length'] = int(field_elem.get('Length', 10))
+                            
+                            validation = field_elem.find('Validation')
+                            if validation:
+                                field_info['validation'] = {}
+                                if validation.find('Required') is not None:
+                                    field_info['validation']['required'] = validation.find('Required').text == '1'
+                                if validation.find('Number') is not None:
+                                    field_info['validation']['number'] = validation.find('Number').text == '1'
+                            
+                            self.modules[module_name][form_name]['fields'][field_name] = field_info
+    
+    def load_fields(self, field_list_elem):
+        """加载字段（旧格式）"""
+        for field_elem in field_list_elem:
             field_type = field_elem.tag
             field_name = field_elem.get('name')
             field_info = {
@@ -48,6 +107,18 @@ class MDAFormEngine:
                     field_info['validation']['number'] = validation.find('Number').text == '1'
             
             self.fields[field_name] = field_info
+    
+    def set_current_form(self, module_name, form_name):
+        """设置当前表单"""
+        self.current_module = module_name
+        self.current_form = form_name
+        self.form_name = form_name
+        
+        # 加载当前表单的字段
+        if module_name in self.modules and form_name in self.modules[module_name]:
+            self.fields = self.modules[module_name][form_name]['fields']
+        else:
+            self.fields = {}
     
     def is_visible(self, visible_ext):
         return visible_ext[0] == '1'  # 简化处理，只考虑PC端
@@ -89,15 +160,27 @@ class MDAFormEngine:
                     value = value.strip()
                 data[field_name] = value
         
-        with open('form_data.json', 'w', encoding='utf-8') as f:
+        # 为每个单据创建独立的数据文件
+        if self.current_module and self.current_form:
+            filename = f'data_{self.current_module}_{self.current_form}.json'
+        else:
+            filename = 'form_data.json'
+        
+        with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         
-        messagebox.showinfo('保存成功', '表单数据已保存')
+        messagebox.showinfo('保存成功', f'表单数据已保存到 {filename}')
     
     def load_data(self):
-        if os.path.exists('form_data.json'):
+        # 为每个单据创建独立的数据文件
+        if self.current_module and self.current_form:
+            filename = f'data_{self.current_module}_{self.current_form}.json'
+        else:
+            filename = 'form_data.json'
+        
+        if os.path.exists(filename):
             try:
-                with open('form_data.json', 'r', encoding='utf-8') as f:
+                with open(filename, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 
                 for field_name, value in data.items():
@@ -109,7 +192,7 @@ class MDAFormEngine:
                         elif hasattr(widget, 'set'):
                             widget.set(value)
                 
-                messagebox.showinfo('加载成功', '历史数据已加载')
+                messagebox.showinfo('加载成功', f'历史数据已加载 from {filename}')
             except Exception as e:
                 messagebox.showerror('加载错误', f'加载数据失败: {e}')
     
@@ -124,7 +207,7 @@ class MDAFormEngine:
     def create_form(self):
         self.root = tk.Tk()
         self.root.title(self.form_name)
-        self.root.geometry('800x600')
+        self.root.geometry('1000x600')
         self.root.resizable(True, True)
         
         # 设置ERP风格的颜色和字体
@@ -155,22 +238,119 @@ class MDAFormEngine:
         
         # 主内容区
         main_frame = tk.Frame(self.root, bg='#f8f9fa')
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # 表单区域
-        form_container = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        # 左侧导航栏
+        nav_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1, width=200)
+        nav_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
+        
+        # 导航栏标题
+        nav_title_frame = tk.Frame(nav_frame, bg='#f8f9fa', relief=tk.FLAT, bd=1)
+        nav_title_frame.pack(fill=tk.X, pady=10, padx=10)
+        nav_title_label = tk.Label(nav_title_frame, text='模块导航', font=('SimHei', 12, 'bold'), bg='#f8f9fa')
+        nav_title_label.pack(pady=5, padx=10, anchor=tk.W)
+        
+        # 模块列表
+        self.nav_tree = ttk.Treeview(nav_frame, show='tree', height=20)
+        self.nav_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 填充模块和单据
+        self.populate_nav_tree()
+        
+        # 绑定导航点击事件
+        self.nav_tree.bind('<<TreeviewSelect>>', self.on_nav_select)
+        
+        # 右侧表单区域
+        form_frame = tk.Frame(main_frame, bg='#f8f9fa')
+        form_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 表单容器
+        form_container = tk.Frame(form_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
         form_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # 表单标题
         form_title_frame = tk.Frame(form_container, bg='#f8f9fa', relief=tk.FLAT, bd=1)
         form_title_frame.pack(fill=tk.X, pady=10, padx=10)
-        form_title_label = tk.Label(form_title_frame, text='表单信息', font=('SimHei', 12, 'bold'), bg='#f8f9fa')
-        form_title_label.pack(pady=5, padx=10, anchor=tk.W)
+        self.form_title_label = tk.Label(form_title_frame, text='表单信息', font=('SimHei', 12, 'bold'), bg='#f8f9fa')
+        self.form_title_label.pack(pady=5, padx=10, anchor=tk.W)
         
         # 字段容器
-        self.form_frame = tk.Frame(form_container, bg='#ffffff')
-        self.form_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        self.fields_frame = tk.Frame(form_container, bg='#ffffff')
+        self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
         
+        # 底部按钮区域
+        button_frame = tk.Frame(form_frame, bg='#f8f9fa')
+        button_frame.pack(fill=tk.X, pady=10, padx=10)
+        
+        # 左侧按钮
+        left_buttons = tk.Frame(button_frame, bg='#f8f9fa')
+        left_buttons.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        save_btn = tk.Button(left_buttons, text='保存', command=self.save_data, width=12, height=2, bg='#007bff', fg='white', font=('SimHei', 10, 'bold'))
+        save_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        load_btn = tk.Button(left_buttons, text='加载', command=self.load_data, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        load_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        reset_btn = tk.Button(left_buttons, text='重置', command=self.reset_form, width=12, height=2, bg='#dc3545', fg='white', font=('SimHei', 10, 'bold'))
+        reset_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 右侧按钮
+        right_buttons = tk.Frame(button_frame, bg='#f8f9fa')
+        right_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        submit_btn = tk.Button(right_buttons, text='提交', command=self.validate_form, width=12, height=2, bg='#28a745', fg='white', font=('SimHei', 10, 'bold'))
+        submit_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+        
+        # 初始化显示第一个表单
+        self.initialize_first_form()
+    
+    def populate_nav_tree(self):
+        """填充导航树"""
+        # 清空现有内容
+        for item in self.nav_tree.get_children():
+            self.nav_tree.delete(item)
+        
+        # 添加模块和单据
+        for module_name, forms in self.modules.items():
+            module_item = self.nav_tree.insert('', tk.END, text=module_name, open=True)
+            for form_name in forms:
+                self.nav_tree.insert(module_item, tk.END, text=form_name, tags=(module_name, form_name))
+    
+    def on_nav_select(self, event):
+        """导航选择事件"""
+        selected_items = self.nav_tree.selection()
+        if not selected_items:
+            return
+        
+        item = selected_items[0]
+        tags = self.nav_tree.item(item, 'tags')
+        if len(tags) == 2:
+            module_name, form_name = tags
+            self.switch_form(module_name, form_name)
+    
+    def switch_form(self, module_name, form_name):
+        """切换表单"""
+        # 设置当前表单
+        self.set_current_form(module_name, form_name)
+        
+        # 更新标题
+        self.root.title(f"{module_name} - {form_name}")
+        self.form_title_label.config(text=f"{form_name}信息")
+        
+        # 清空现有字段控件
+        for widget in self.fields_frame.winfo_children():
+            widget.destroy()
+        self.field_widgets.clear()
+        
+        # 重新渲染字段
+        self.render_fields()
+        
+        # 加载表单数据
+        self.load_data()
+    
+    def render_fields(self):
+        """渲染字段"""
         # 计算最大字段数量和布局
         max_columns = 2
         field_count = 0
@@ -184,13 +364,13 @@ class MDAFormEngine:
             col = field_count % max_columns
             
             # 字段标签
-            label_frame = tk.Frame(self.form_frame, bg='#ffffff')
+            label_frame = tk.Frame(self.fields_frame, bg='#ffffff')
             label_frame.grid(row=row, column=col*2, padx=10, pady=10, sticky=tk.W)
             label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15)
             label.pack(pady=2, anchor=tk.W)
             
             # 字段输入控件
-            input_frame = tk.Frame(self.form_frame, bg='#ffffff')
+            input_frame = tk.Frame(self.fields_frame, bg='#ffffff')
             input_frame.grid(row=row, column=col*2+1, padx=10, pady=10, sticky=tk.W)
             
             if field_info['type'] == 'TextField':
@@ -214,33 +394,19 @@ class MDAFormEngine:
                 self.field_widgets[field_name] = entry
             
             field_count += 1
-        
-        # 底部按钮区域
-        button_frame = tk.Frame(main_frame, bg='#f8f9fa')
-        button_frame.pack(fill=tk.X, pady=10, padx=10)
-        
-        # 左侧按钮
-        left_buttons = tk.Frame(button_frame, bg='#f8f9fa')
-        left_buttons.pack(side=tk.LEFT, padx=10, pady=5)
-        
-        save_btn = tk.Button(left_buttons, text='保存', command=self.save_data, width=12, height=2, bg='#007bff', fg='white', font=('SimHei', 10, 'bold'))
-        save_btn.pack(side=tk.LEFT, padx=5, pady=5)
-        
-        load_btn = tk.Button(left_buttons, text='加载', command=self.load_data, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
-        load_btn.pack(side=tk.LEFT, padx=5, pady=5)
-        
-        reset_btn = tk.Button(left_buttons, text='重置', command=self.reset_form, width=12, height=2, bg='#dc3545', fg='white', font=('SimHei', 10, 'bold'))
-        reset_btn.pack(side=tk.LEFT, padx=5, pady=5)
-        
-        # 右侧按钮
-        right_buttons = tk.Frame(button_frame, bg='#f8f9fa')
-        right_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
-        
-        submit_btn = tk.Button(right_buttons, text='提交', command=self.validate_form, width=12, height=2, bg='#28a745', fg='white', font=('SimHei', 10, 'bold'))
-        submit_btn.pack(side=tk.RIGHT, padx=5, pady=5)
-        
-        # 加载历史数据
-        self.load_data()
+    
+    def initialize_first_form(self):
+        """初始化显示第一个表单"""
+        if self.modules:
+            first_module = next(iter(self.modules))
+            if self.modules[first_module]:
+                first_form = next(iter(self.modules[first_module]))
+                self.switch_form(first_module, first_form)
+        else:
+            # 渲染当前字段
+            self.render_fields()
+            # 加载历史数据
+            self.load_data()
     
     def limit_text(self, widget, max_length):
         current_text = widget.get('1.0', tk.END) if hasattr(widget, 'get') and widget.cget('class') == 'Text' else widget.get()
