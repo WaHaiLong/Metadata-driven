@@ -5,16 +5,7 @@
             <Forms>
                 <Form name="采购订单">
                     <FieldList>
-                        <TextField name="订单编号" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" />
-                        <TextField name="供应商名称" Left="10" Top="50" Width="200" Height="30" VisibleExt="111" Length="200" />
-                        <ComboBox name="付款方式" Left="10" Top="90" Width="200" Height="30" VisibleExt="111">
-                            <Options>
-                                <Option>选项1</Option>
-                                <Option>选项2</Option>
-                            </Options>
-                        </ComboBox>
-                        <MoneyField name="金额" Left="10" Top="130" Width="200" Height="30" VisibleExt="111" Length="10" />
-                    </FieldList>
+                        <TextField name="订单编号" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /><TextField name="供应商名称" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /><ComboBox name="付款方式" Left="10" Top="10" Width="200" Height="30" VisibleExt="111"><Options><Option>选项1</Option><Option>选项2</Option></Options></ComboBox><MoneyField name="金额" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="10" /><TextField name="新字段5" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /></FieldList>
                 </Form>
                 <Form name="采购入库">
                     <FieldList>

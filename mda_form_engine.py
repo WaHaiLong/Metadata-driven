@@ -207,17 +207,86 @@ class MDAFormEngine:
     def create_form(self):
         self.root = tk.Tk()
         self.root.title(self.form_name)
-        self.root.geometry('1000x600')
+        self.root.geometry('1200x800')
         self.root.resizable(True, True)
         
         # 设置ERP风格的颜色和字体
         self.root.configure(bg='#f8f9fa')
         
+        # 全局样式设置
+        style = ttk.Style()
+        
+        # 配置按钮样式
+        style.configure('TButton',
+                       font=('SimHei', 10),
+                       padding=[10, 5],
+                       relief=tk.FLAT)
+        
+        # 配置标签样式
+        style.configure('TLabel',
+                       font=('SimHei', 10),
+                       foreground='#333333')
+        
+        # 配置输入框样式
+        style.configure('TEntry',
+                       font=('SimHei', 10),
+                       padding=[5, 3])
+        
+        # 配置下拉框样式
+        style.configure('TCombobox',
+                       font=('SimHei', 10),
+                       padding=[5, 3])
+        
+        # 配置滚动条样式
+        style.configure('Vertical.TScrollbar',
+                       gripcount=0,
+                       background='#f0f0f0',
+                       darkcolor='#f0f0f0',
+                       lightcolor='#f0f0f0',
+                       troughcolor='#f0f0f0',
+                       arrowcolor='#666666')
+        
+        style.configure('Horizontal.TScrollbar',
+                       gripcount=0,
+                       background='#f0f0f0',
+                       darkcolor='#f0f0f0',
+                       lightcolor='#f0f0f0',
+                       troughcolor='#f0f0f0',
+                       arrowcolor='#666666')
+        
         # 顶部标题栏
-        title_frame = tk.Frame(self.root, bg='#1a56db', relief=tk.RAISED, bd=2)
+        title_frame = tk.Frame(self.root, bg='#1a56db', relief=tk.RAISED, bd=0)
         title_frame.pack(fill=tk.X, pady=0, padx=0)
-        title_label = tk.Label(title_frame, text=self.form_name, font=('SimHei', 16, 'bold'), bg='#1a56db', fg='white')
-        title_label.pack(pady=10, padx=20, anchor=tk.W)
+        
+        # 左侧：系统名称
+        left_title = tk.Frame(title_frame, bg='#1a56db')
+        left_title.pack(side=tk.LEFT, padx=20, pady=5)
+        
+        system_label = tk.Label(left_title, text='未来AI', font=('SimHei', 14, 'bold'), bg='#1a56db', fg='white')
+        system_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        module_label = tk.Label(left_title, text='智能云', font=('SimHei', 12), bg='#1a56db', fg='white')
+        module_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        # 右侧：用户信息和快捷操作
+        right_title = tk.Frame(title_frame, bg='#1a56db')
+        right_title.pack(side=tk.RIGHT, padx=20, pady=5)
+        
+        # 通知按钮
+        notify_btn = tk.Button(right_title, text='🔔', font=('SimHei', 12), bg='#1a56db', fg='white', bd=0, width=3, height=1)
+        notify_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        # 设置按钮
+        settings_btn = tk.Button(right_title, text='⚙️', font=('SimHei', 12), bg='#1a56db', fg='white', bd=0, width=3, height=1)
+        settings_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        # 用户信息
+        user_label = tk.Label(right_title, text='张明华', font=('SimHei', 12), bg='#1a56db', fg='white')
+        user_label.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        # 登录按钮
+        login_btn = tk.Button(right_title, text='注册账号', font=('SimHei', 10), bg='#1a56db', fg='white', bd=0, width=8, height=1)
+        login_btn.pack(side=tk.RIGHT, padx=10, pady=5)
         
         # 工具栏
         toolbar_frame = tk.Frame(self.root, bg='#e9ecef', relief=tk.RAISED, bd=1)
@@ -241,18 +310,34 @@ class MDAFormEngine:
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # 左侧导航栏
-        nav_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1, width=200)
-        nav_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
+        nav_frame = tk.Frame(main_frame, bg='#f0f2f5', relief=tk.RAISED, bd=0, width=220)
+        nav_frame.pack(side=tk.LEFT, fill=tk.Y, padx=0, pady=0)
         
         # 导航栏标题
-        nav_title_frame = tk.Frame(nav_frame, bg='#f8f9fa', relief=tk.FLAT, bd=1)
+        nav_title_frame = tk.Frame(nav_frame, bg='#f0f2f5', relief=tk.FLAT, bd=0)
         nav_title_frame.pack(fill=tk.X, pady=10, padx=10)
-        nav_title_label = tk.Label(nav_title_frame, text='模块导航', font=('SimHei', 12, 'bold'), bg='#f8f9fa')
+        nav_title_label = tk.Label(nav_title_frame, text='模块导航', font=('SimHei', 12, 'bold'), bg='#f0f2f5', fg='#333333')
         nav_title_label.pack(pady=5, padx=10, anchor=tk.W)
         
         # 模块列表
-        self.nav_tree = ttk.Treeview(nav_frame, show='tree', height=20)
-        self.nav_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.nav_tree = ttk.Treeview(nav_frame, show='tree', height=25)
+        
+        # 定制导航树样式
+        style = ttk.Style()
+        style.configure('Custom.Treeview', 
+                       background='#f0f2f5', 
+                       foreground='#333333', 
+                       rowheight=28, 
+                       fieldbackground='#f0f2f5',
+                       font=('SimHei', 10))
+        style.configure('Custom.Treeview.Item',
+                       padding=[10, 5])
+        style.map('Custom.Treeview',
+                 background=[('selected', '#e6f7ff'), ('hover', '#f5f5f5')],
+                 foreground=[('selected', '#1890ff')])
+        
+        self.nav_tree.configure(style='Custom.Treeview')
+        self.nav_tree.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
         
         # 填充模块和单据
         self.populate_nav_tree()
@@ -262,44 +347,71 @@ class MDAFormEngine:
         
         # 右侧表单区域
         form_frame = tk.Frame(main_frame, bg='#f8f9fa')
-        form_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        form_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=0, pady=0)
+        
+        # 操作按钮栏
+        action_frame = tk.Frame(form_frame, bg='#ffffff', relief=tk.FLAT, bd=1)
+        action_frame.pack(fill=tk.X, pady=0, padx=0)
+        
+        # 左侧操作按钮
+        left_actions = tk.Frame(action_frame, bg='#ffffff')
+        left_actions.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        new_btn = tk.Button(left_actions, text='新增', command=self.save_data, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
+        new_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        edit_btn = tk.Button(left_actions, text='修改', command=self.load_data, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
+        edit_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        delete_btn = tk.Button(left_actions, text='删除', command=self.reset_form, width=8, height=1, bg='#ff4d4f', fg='white', font=('SimHei', 9, 'bold'))
+        delete_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 右侧操作按钮
+        right_actions = tk.Frame(action_frame, bg='#ffffff')
+        right_actions.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        refresh_btn = tk.Button(right_actions, text='刷新', command=self.load_data, width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9, 'bold'))
+        refresh_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+        
+        export_btn = tk.Button(right_actions, text='导出', command=self.save_data, width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9, 'bold'))
+        export_btn.pack(side=tk.RIGHT, padx=5, pady=5)
         
         # 表单容器
-        form_container = tk.Frame(form_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
-        form_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        form_container = tk.Frame(form_frame, bg='#ffffff', relief=tk.FLAT, bd=0)
+        form_container.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
         
         # 表单标题
-        form_title_frame = tk.Frame(form_container, bg='#f8f9fa', relief=tk.FLAT, bd=1)
-        form_title_frame.pack(fill=tk.X, pady=10, padx=10)
-        self.form_title_label = tk.Label(form_title_frame, text='表单信息', font=('SimHei', 12, 'bold'), bg='#f8f9fa')
-        self.form_title_label.pack(pady=5, padx=10, anchor=tk.W)
+        form_title_frame = tk.Frame(form_container, bg='#fafafa', relief=tk.FLAT, bd=0)
+        form_title_frame.pack(fill=tk.X, pady=0, padx=0)
+        self.form_title_label = tk.Label(form_title_frame, text='表单信息', font=('SimHei', 12, 'bold'), bg='#fafafa', fg='#333333')
+        self.form_title_label.pack(pady=10, padx=20, anchor=tk.W)
         
         # 字段容器
         self.fields_frame = tk.Frame(form_container, bg='#ffffff')
-        self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
         # 底部按钮区域
-        button_frame = tk.Frame(form_frame, bg='#f8f9fa')
-        button_frame.pack(fill=tk.X, pady=10, padx=10)
+        button_frame = tk.Frame(form_container, bg='#ffffff', relief=tk.FLAT, bd=0)
+        button_frame.pack(fill=tk.X, pady=10, padx=20)
         
         # 左侧按钮
-        left_buttons = tk.Frame(button_frame, bg='#f8f9fa')
+        left_buttons = tk.Frame(button_frame, bg='#ffffff')
         left_buttons.pack(side=tk.LEFT, padx=10, pady=5)
         
-        save_btn = tk.Button(left_buttons, text='保存', command=self.save_data, width=12, height=2, bg='#007bff', fg='white', font=('SimHei', 10, 'bold'))
+        save_btn = tk.Button(left_buttons, text='保存', command=self.save_data, width=10, height=2, bg='#1890ff', fg='white', font=('SimHei', 10, 'bold'))
         save_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
-        load_btn = tk.Button(left_buttons, text='加载', command=self.load_data, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        load_btn = tk.Button(left_buttons, text='加载', command=self.load_data, width=10, height=2, bg='#52c41a', fg='white', font=('SimHei', 10, 'bold'))
         load_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
-        reset_btn = tk.Button(left_buttons, text='重置', command=self.reset_form, width=12, height=2, bg='#dc3545', fg='white', font=('SimHei', 10, 'bold'))
+        reset_btn = tk.Button(left_buttons, text='重置', command=self.reset_form, width=10, height=2, bg='#faad14', fg='white', font=('SimHei', 10, 'bold'))
         reset_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
         # 右侧按钮
-        right_buttons = tk.Frame(button_frame, bg='#f8f9fa')
+        right_buttons = tk.Frame(button_frame, bg='#ffffff')
         right_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
         
-        submit_btn = tk.Button(right_buttons, text='提交', command=self.validate_form, width=12, height=2, bg='#28a745', fg='white', font=('SimHei', 10, 'bold'))
+        submit_btn = tk.Button(right_buttons, text='提交', command=self.validate_form, width=10, height=2, bg='#1890ff', fg='white', font=('SimHei', 10, 'bold'))
         submit_btn.pack(side=tk.RIGHT, padx=5, pady=5)
         
         # 初始化显示第一个表单
@@ -311,11 +423,28 @@ class MDAFormEngine:
         for item in self.nav_tree.get_children():
             self.nav_tree.delete(item)
         
+        # 模块图标映射
+        module_icons = {
+            '采购管理': '📦',
+            '销售管理': '💼',
+            '库存管理': '🏪',
+            '财务管理': '💰',
+            '人力资源': '👥',
+            '生产管理': '🏭',
+            'CRM': '👤'
+        }
+        
         # 添加模块和单据
         for module_name, forms in self.modules.items():
-            module_item = self.nav_tree.insert('', tk.END, text=module_name, open=True)
+            # 获取模块图标
+            icon = module_icons.get(module_name, '📁')
+            
+            # 添加模块
+            module_item = self.nav_tree.insert('', tk.END, text=f'{icon} {module_name}', open=True)
+            
+            # 添加单据
             for form_name in forms:
-                self.nav_tree.insert(module_item, tk.END, text=form_name, tags=(module_name, form_name))
+                self.nav_tree.insert(module_item, tk.END, text=f'📄 {form_name}', tags=(module_name, form_name))
     
     def on_nav_select(self, event):
         """导航选择事件"""
@@ -343,11 +472,22 @@ class MDAFormEngine:
             widget.destroy()
         self.field_widgets.clear()
         
-        # 重新渲染字段
-        self.render_fields()
-        
-        # 加载表单数据
-        self.load_data()
+        # 模拟数据，用于测试表格布局
+        if form_name == '采购订单' or form_name == '销售订单':
+            # 显示表格布局
+            test_data = [
+                {'订单编号': 'PO20260210001', '供应商': '上海金蝶软件有限公司', '金额': '10000.00', '状态': '已审核', '创建日期': '2026-02-10'},
+                {'订单编号': 'PO20260210002', '供应商': '北京用友网络科技股份有限公司', '金额': '20000.00', '状态': '未审核', '创建日期': '2026-02-10'},
+                {'订单编号': 'PO20260210003', '供应商': '深圳华为技术有限公司', '金额': '30000.00', '状态': '已审核', '创建日期': '2026-02-09'},
+                {'订单编号': 'PO20260210004', '供应商': '杭州阿里巴巴网络技术有限公司', '金额': '40000.00', '状态': '未审核', '创建日期': '2026-02-09'},
+                {'订单编号': 'PO20260210005', '供应商': '腾讯科技(深圳)有限公司', '金额': '50000.00', '状态': '已审核', '创建日期': '2026-02-08'}
+            ]
+            self.render_table(test_data)
+        else:
+            # 渲染字段
+            self.render_fields()
+            # 加载表单数据
+            self.load_data()
     
     def render_fields(self):
         """渲染字段"""
@@ -365,35 +505,113 @@ class MDAFormEngine:
             
             # 字段标签
             label_frame = tk.Frame(self.fields_frame, bg='#ffffff')
-            label_frame.grid(row=row, column=col*2, padx=10, pady=10, sticky=tk.W)
-            label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15)
+            label_frame.grid(row=row, column=col*2, padx=15, pady=12, sticky=tk.W)
+            label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15, fg='#333333')
             label.pack(pady=2, anchor=tk.W)
             
             # 字段输入控件
             input_frame = tk.Frame(self.fields_frame, bg='#ffffff')
-            input_frame.grid(row=row, column=col*2+1, padx=10, pady=10, sticky=tk.W)
+            input_frame.grid(row=row, column=col*2+1, padx=15, pady=12, sticky=tk.W)
             
             if field_info['type'] == 'TextField':
                 if field_info['height'] > 30:
-                    text_widget = tk.Text(input_frame, wrap=tk.WORD, width=30, height=4, font=('SimHei', 10))
+                    text_widget = tk.Text(input_frame, wrap=tk.WORD, width=35, height=4, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
                     text_widget.pack(pady=2)
                     text_widget.bind('<KeyRelease>', lambda e, w=text_widget, l=field_info['length']: self.limit_text(w, l))
                     self.field_widgets[field_name] = text_widget
                 else:
-                    entry = tk.Entry(input_frame, width=30, font=('SimHei', 10))
+                    entry = tk.Entry(input_frame, width=35, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
                     entry.pack(pady=2)
                     entry.bind('<KeyRelease>', lambda e, w=entry, l=field_info['length']: self.limit_text(w, l))
                     self.field_widgets[field_name] = entry
             elif field_info['type'] == 'ComboBox':
-                combobox = ttk.Combobox(input_frame, values=field_info['options'], width=28, font=('SimHei', 10))
+                combobox = ttk.Combobox(input_frame, values=field_info['options'], width=33, font=('SimHei', 10))
                 combobox.pack(pady=2)
                 self.field_widgets[field_name] = combobox
             elif field_info['type'] == 'MoneyField':
-                entry = tk.Entry(input_frame, width=30, font=('SimHei', 10))
+                entry = tk.Entry(input_frame, width=35, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
                 entry.pack(pady=2)
                 self.field_widgets[field_name] = entry
             
             field_count += 1
+    
+    def render_table(self, data):
+        """渲染表格数据"""
+        # 清空现有内容
+        for widget in self.fields_frame.winfo_children():
+            widget.destroy()
+        
+        # 创建表格
+        columns = list(data[0].keys()) if data else []
+        
+        if columns:
+            # 创建表格框架
+            table_frame = tk.Frame(self.fields_frame, bg='#ffffff')
+            table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            
+            # 创建滚动条
+            scrollbar_y = ttk.Scrollbar(table_frame, orient=tk.VERTICAL)
+            scrollbar_x = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL)
+            
+            # 创建表格
+            table = ttk.Treeview(table_frame, 
+                                columns=columns, 
+                                show='headings', 
+                                yscrollcommand=scrollbar_y.set, 
+                                xscrollcommand=scrollbar_x.set)
+            
+            # 配置滚动条
+            scrollbar_y.config(command=table.yview)
+            scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+            
+            scrollbar_x.config(command=table.xview)
+            scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+            
+            # 设置列标题
+            for col in columns:
+                table.heading(col, text=col)
+                table.column(col, width=120, anchor=tk.CENTER)
+            
+            # 填充数据
+            for row in data:
+                table.insert('', tk.END, values=list(row.values()))
+            
+            # 定制表格样式
+            style = ttk.Style()
+            style.configure('Custom.Treeview', 
+                           background='#ffffff', 
+                           foreground='#333333', 
+                           rowheight=25, 
+                           fieldbackground='#ffffff',
+                           font=('SimHei', 9))
+            style.map('Custom.Treeview',
+                     background=[('selected', '#e6f7ff'), ('hover', '#f5f5f5')],
+                     foreground=[('selected', '#1890ff')])
+            
+            table.configure(style='Custom.Treeview')
+            table.pack(fill=tk.BOTH, expand=True)
+            
+            # 分页控件
+            pagination_frame = tk.Frame(self.fields_frame, bg='#ffffff')
+            pagination_frame.pack(fill=tk.X, padx=10, pady=10)
+            
+            page_info = tk.Label(pagination_frame, text='共 100 条记录，第 1/10 页', font=('SimHei', 9), bg='#ffffff', fg='#666666')
+            page_info.pack(side=tk.LEFT, padx=10, pady=5)
+            
+            page_buttons = tk.Frame(pagination_frame, bg='#ffffff')
+            page_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
+            
+            first_btn = tk.Button(page_buttons, text='首页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9))
+            first_btn.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            prev_btn = tk.Button(page_buttons, text='上一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9))
+            prev_btn.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            next_btn = tk.Button(page_buttons, text='下一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9))
+            next_btn.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            last_btn = tk.Button(page_buttons, text='末页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9))
+            last_btn.pack(side=tk.LEFT, padx=5, pady=5)
     
     def initialize_first_form(self):
         """初始化显示第一个表单"""
