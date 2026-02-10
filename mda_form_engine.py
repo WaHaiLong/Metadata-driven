@@ -253,9 +253,10 @@ class MDAFormEngine:
         # 刷新数据列表
         self.refresh_data_list()
         
-        # 保存成功后隐藏字段区域
-        if hasattr(self, 'fields_frame'):
-            self.fields_frame.pack_forget()
+        # 保存成功后显示数据列表
+        # 不再隐藏字段区域，让数据列表正常显示
+        # if hasattr(self, 'fields_frame'):
+        #     self.fields_frame.pack_forget()
     
     def load_data(self, record_id=None):
         # 为每个单据创建独立的数据文件
@@ -858,10 +859,10 @@ class MDAFormEngine:
             self.load_data()
     
     def limit_text(self, widget, max_length):
-        current_text = widget.get('1.0', tk.END) if hasattr(widget, 'get') and widget.cget('class') == 'Text' else widget.get()
+        current_text = widget.get('1.0', tk.END) if hasattr(widget, 'get') and widget.winfo_class() == 'Text' else widget.get()
         if len(current_text) > max_length:
             if hasattr(widget, 'delete'):
-                if widget.cget('class') == 'Text':
+                if widget.winfo_class() == 'Text':
                     widget.delete(f'1.0+{max_length}c', tk.END)
                 else:
                     widget.delete(max_length, tk.END)
