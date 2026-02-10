@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FormMetadata>
+    <Form name="测试表单">
+        <FieldList>
+            <TextField name="测试增量元数据" Length="500" Left="10" Top="10" Width="400" Height="100" VisibleExt="111">
+                <Validation>
+                    <Required>1</Required>
+                </Validation>
+            </TextField>
+            <ComboBox name="付款方式" Left="10" Top="120" Width="200" Height="30" VisibleExt="111">
+                <Options>
+                    <Option>现金</Option>
+                    <Option>转账</Option>
+                    <Option>承兑</Option>
+                </Options>
+            </ComboBox>
+            <MoneyField name="金额" Length="10" Left="10" Top="160" Width="200" Height="30" VisibleExt="111">
+                <Validation>
+                    <Required>1</Required>
+                    <Number>1</Number>
+                </Validation>
+            </MoneyField>
+            <TextField name="订单编号" Length="50" Left="220" Top="120" Width="200" Height="30" VisibleExt="111"/>
+            <TextField name="供应商名称" Length="100" Left="220" Top="160" Width="200" Height="30" VisibleExt="111"/>
+        </FieldList>
+    </Form>
+</FormMetadata>

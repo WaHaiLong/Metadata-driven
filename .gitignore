@@ -1,0 +1,27 @@
+# 构建目录
+build/
+dist/
+
+# Python缓存
+__pycache__/
+*.pyc
+
+# 测试生成的文件
+form_data.json
+test_metadata.xml
+test_integration_metadata.xml
+
+# 打包配置文件
+*.spec
+
+# 临时文件
+*.tmp
+*.temp
+
+# IDE配置
+.vscode/
+.idea/
+
+# 系统文件
+Thumbs.db
+.DS_Store
