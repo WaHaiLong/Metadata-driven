@@ -143,6 +143,16 @@ class MDAFormEngine:
         toolbar_label = tk.Label(toolbar_frame, text='操作', font=('SimHei', 10, 'bold'), bg='#e9ecef')
         toolbar_label.pack(side=tk.LEFT, padx=10, pady=5)
         
+        # 帮助系统
+        help_label = tk.Label(toolbar_frame, text='帮助', font=('SimHei', 10, 'bold'), bg='#e9ecef')
+        help_label.pack(side=tk.LEFT, padx=20, pady=5)
+        
+        help_btn = tk.Button(toolbar_frame, text='使用指南', command=self.show_help, width=10, height=1, bg='#17a2b8', fg='white', font=('SimHei', 9, 'bold'))
+        help_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        guide_btn = tk.Button(toolbar_frame, text='操作引导', command=self.show_guide, width=10, height=1, bg='#17a2b8', fg='white', font=('SimHei', 9, 'bold'))
+        guide_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
         # 主内容区
         main_frame = tk.Frame(self.root, bg='#f8f9fa')
         main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
@@ -244,6 +254,134 @@ class MDAFormEngine:
     def run(self):
         self.create_form()
         self.root.mainloop()
+    
+    def show_help(self):
+        """显示使用指南"""
+        help_window = tk.Toplevel(self.root)
+        help_window.title('使用指南')
+        help_window.geometry('700x500')
+        help_window.resizable(True, True)
+        help_window.configure(bg='#f8f9fa')
+        
+        # 顶部标题栏
+        title_frame = tk.Frame(help_window, bg='#1a56db', relief=tk.RAISED, bd=2)
+        title_frame.pack(fill=tk.X, pady=0, padx=0)
+        title_label = tk.Label(title_frame, text='使用指南', font=('SimHei', 16, 'bold'), bg='#1a56db', fg='white')
+        title_label.pack(pady=10, padx=20, anchor=tk.W)
+        
+        # 主内容区
+        main_frame = tk.Frame(help_window, bg='#f8f9fa')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 帮助内容
+        content_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 帮助文本
+        help_text = """使用指南
+
+1. 表单填写
+   - 在各个字段中输入相应的数据
+   - 文本字段支持多行输入
+   - 下拉框可以选择预设的选项
+   - 金额字段只能输入数字
+
+2. 操作按钮
+   - 保存：将当前表单数据保存到本地
+   - 加载：从本地加载之前保存的数据
+   - 重置：清空所有字段的内容
+   - 提交：验证表单数据并提交
+
+3. 验证规则
+   - 非空字段：必须填写内容
+   - 数字字段：只能输入数字格式
+
+4. 多端适配
+   - 系统会根据设备类型自动调整显示
+
+5. 常见问题
+   - 保存失败：检查文件权限
+   - 验证错误：按照提示修改输入内容
+   - 字段显示：确保字段在当前设备上可见
+
+6. 高级功能
+   - 使用元数据编辑器可以添加、修改字段
+   - 支持配置模板的保存和加载
+
+如有其他问题，请联系系统管理员。"""
+        
+        text_widget = tk.Text(content_frame, font=('SimHei', 10), wrap=tk.WORD, bg='#ffffff')
+        text_widget.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        text_widget.insert(tk.END, help_text)
+        text_widget.config(state=tk.DISABLED)
+        
+        # 底部按钮
+        button_frame = tk.Frame(main_frame, bg='#f8f9fa')
+        button_frame.pack(fill=tk.X, pady=10, padx=10)
+        
+        close_btn = tk.Button(button_frame, text='关闭', command=help_window.destroy, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        close_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        # 居中显示
+        help_window.transient(self.root)
+        help_window.grab_set()
+        self.root.wait_window(help_window)
+    
+    def show_guide(self):
+        """显示操作引导"""
+        guide_window = tk.Toplevel(self.root)
+        guide_window.title('操作引导')
+        guide_window.geometry('700x400')
+        guide_window.resizable(True, True)
+        guide_window.configure(bg='#f8f9fa')
+        
+        # 顶部标题栏
+        title_frame = tk.Frame(guide_window, bg='#1a56db', relief=tk.RAISED, bd=2)
+        title_frame.pack(fill=tk.X, pady=0, padx=0)
+        title_label = tk.Label(title_frame, text='操作引导', font=('SimHei', 16, 'bold'), bg='#1a56db', fg='white')
+        title_label.pack(pady=10, padx=20, anchor=tk.W)
+        
+        # 主内容区
+        main_frame = tk.Frame(guide_window, bg='#f8f9fa')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 引导内容
+        content_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 引导步骤
+        guide_steps = [
+            "1. 打开表单系统",
+            "2. 填写表单字段",
+            "3. 点击保存按钮保存数据",
+            "4. 点击加载按钮恢复数据",
+            "5. 点击提交按钮验证并提交"
+        ]
+        
+        steps_frame = tk.Frame(content_frame, bg='#ffffff')
+        steps_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        for i, step in enumerate(guide_steps, 1):
+            step_frame = tk.Frame(steps_frame, bg='#ffffff')
+            step_frame.pack(fill=tk.X, pady=10, padx=10)
+            
+            step_num = tk.Label(step_frame, text=str(i), font=('SimHei', 12, 'bold'), bg='#1a56db', fg='white', width=3, height=2)
+            step_num.pack(side=tk.LEFT, padx=10, pady=5)
+            
+            step_text = tk.Label(step_frame, text=step, font=('SimHei', 11), bg='#ffffff', anchor=tk.W)
+            step_text.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.X, expand=True)
+        
+        # 底部按钮
+        button_frame = tk.Frame(main_frame, bg='#f8f9fa')
+        button_frame.pack(fill=tk.X, pady=10, padx=10)
+        
+        close_btn = tk.Button(button_frame, text='关闭', command=guide_window.destroy, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        close_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        # 居中显示
+        guide_window.transient(self.root)
+        guide_window.grab_set()
+        self.root.wait_window(guide_window)
 
 if __name__ == '__main__':
     engine = MDAFormEngine('erp_form_metadata.xml')
