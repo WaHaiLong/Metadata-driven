@@ -1385,6 +1385,52 @@ class MetadataEditor:
                             # 添加FieldList元素
                             field_list_elem = ET.SubElement(form_elem, 'FieldList')
                             
+                            # 添加基础字段
+                            # ID字段（隐藏）
+                            id_field = ET.SubElement(field_list_elem, 'TextField')
+                            id_field.set('name', 'id')
+                            id_field.set('Left', '10')
+                            id_field.set('Top', '10')
+                            id_field.set('Width', '200')
+                            id_field.set('Height', '30')
+                            id_field.set('VisibleExt', '000')  # 隐藏字段
+                            id_field.set('Length', '50')
+                            
+                            # 状态字段
+                            status_field = ET.SubElement(field_list_elem, 'ComboBox')
+                            status_field.set('name', '状态')
+                            status_field.set('Left', '10')
+                            status_field.set('Top', '50')
+                            status_field.set('Width', '200')
+                            status_field.set('Height', '30')
+                            status_field.set('VisibleExt', '111')
+                            # 添加状态选项
+                            options_elem = ET.SubElement(status_field, 'Options')
+                            ET.SubElement(options_elem, 'Option').text = '草稿'
+                            ET.SubElement(options_elem, 'Option').text = '已提交'
+                            ET.SubElement(options_elem, 'Option').text = '已审核'
+                            ET.SubElement(options_elem, 'Option').text = '已拒绝'
+                            
+                            # 创建时间字段（隐藏）
+                            created_at_field = ET.SubElement(field_list_elem, 'TextField')
+                            created_at_field.set('name', 'created_at')
+                            created_at_field.set('Left', '10')
+                            created_at_field.set('Top', '90')
+                            created_at_field.set('Width', '200')
+                            created_at_field.set('Height', '30')
+                            created_at_field.set('VisibleExt', '000')  # 隐藏字段
+                            created_at_field.set('Length', '50')
+                            
+                            # 创建人字段（隐藏）
+                            created_by_field = ET.SubElement(field_list_elem, 'TextField')
+                            created_by_field.set('name', 'created_by')
+                            created_by_field.set('Left', '10')
+                            created_by_field.set('Top', '130')
+                            created_by_field.set('Width', '200')
+                            created_by_field.set('Height', '30')
+                            created_by_field.set('VisibleExt', '000')  # 隐藏字段
+                            created_by_field.set('Length', '50')
+                            
                             # 保存XML
                             tree.write(self.metadata_file, encoding='UTF-8', xml_declaration=True)
                             

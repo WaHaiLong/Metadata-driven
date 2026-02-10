@@ -11,6 +11,15 @@ form_data.json
 test_metadata.xml
 test_integration_metadata.xml
 
+# 数据文件
+data_*.json
+
+# 导出文件
+export_*.csv
+
+# 系统生成的临时目录
+.trae/
+
 # 打包配置文件
 *.spec
 
