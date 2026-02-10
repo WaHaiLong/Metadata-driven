@@ -23,7 +23,7 @@ class MDAFormEngine:
         
         # 检查是否有Modules节点（新格式）
         modules_elem = root.find('Modules')
-        if modules_elem:
+        if modules_elem is not None:
             self.load_modules(modules_elem)
         else:
             # 向后兼容：旧格式
@@ -39,7 +39,7 @@ class MDAFormEngine:
             self.modules[module_name] = {}
             
             forms_elem = module_elem.find('Forms')
-            if forms_elem:
+            if forms_elem is not None:
                 for form_elem in forms_elem.findall('Form'):
                     form_name = form_elem.get('name')
                     self.modules[module_name][form_name] = {
@@ -47,7 +47,7 @@ class MDAFormEngine:
                     }
                     
                     field_list = form_elem.find('FieldList')
-                    if field_list:
+                    if field_list is not None:
                         for field_elem in field_list:
                             field_type = field_elem.tag
                             field_name = field_elem.get('name')
@@ -124,6 +124,9 @@ class MDAFormEngine:
         return visible_ext[0] == '1'  # 简化处理，只考虑PC端
     
     def validate_form(self):
+        """验证表单数据"""
+        errors = []
+        
         for field_name, field_info in self.fields.items():
             if not self.is_visible(field_info['visible_ext']):
                 continue
@@ -132,24 +135,69 @@ class MDAFormEngine:
             if not widget:
                 continue
             
-            validation = field_info.get('validation', {})
-            if validation.get('required'):
-                value = widget.get() if hasattr(widget, 'get') else ''
-                if isinstance(value, str) and not value.strip():
-                    messagebox.showerror('验证错误', f'{field_name} 不能为空')
-                    return False
+            # 获取字段值
+            if hasattr(widget, 'get'):
+                if widget.cget('class') == 'Text':
+                    value = widget.get('1.0', tk.END).strip()
+                else:
+                    value = widget.get()
+                    if isinstance(value, str):
+                        value = value.strip()
+            else:
+                value = ''
             
+            # 验证规则
+            validation = field_info.get('validation', {})
+            
+            # 非空验证
+            if validation.get('required'):
+                if not value:
+                    errors.append(f'{field_name} 不能为空')
+            
+            # 数字验证
             if validation.get('number'):
-                value = widget.get() if hasattr(widget, 'get') else ''
-                if value and isinstance(value, str):
+                if value:
                     try:
                         float(value)
                     except ValueError:
-                        messagebox.showerror('验证错误', f'{field_name} 必须是数字')
-                        return False
+                        errors.append(f'{field_name} 必须是数字')
+            
+            # 长度验证
+            if field_info.get('length'):
+                max_length = field_info['length']
+                if len(value) > max_length:
+                    errors.append(f'{field_name} 长度不能超过 {max_length} 个字符')
+            
+            # 自定义验证规则
+            custom_error = self.custom_validation(field_name, value, field_info)
+            if custom_error:
+                errors.append(custom_error)
         
-        messagebox.showinfo('验证成功', '表单验证通过')
-        return True
+        # 显示验证结果
+        if errors:
+            error_message = '\n'.join(errors)
+            messagebox.showerror('验证错误', f'请检查以下错误：\n\n{error_message}')
+            return False
+        else:
+            messagebox.showinfo('验证成功', '表单验证通过')
+            return True
+    
+    def custom_validation(self, field_name, value, field_info):
+        """自定义验证规则"""
+        # 这里可以添加自定义的验证规则
+        # 例如：邮箱格式验证、手机号验证等
+        
+        # 示例：如果字段名包含"邮箱"，验证邮箱格式
+        if '邮箱' in field_name or 'email' in field_name.lower():
+            if value and '@' not in value:
+                return f'{field_name} 格式不正确，必须包含 @ 符号'
+        
+        # 示例：如果字段名包含"手机"，验证手机号格式
+        if '手机' in field_name or 'phone' in field_name.lower():
+            if value and (len(value) != 11 or not value.isdigit()):
+                return f'{field_name} 格式不正确，必须是11位数字'
+        
+        return None
     
     def save_data(self):
         data = {}
@@ -166,12 +214,47 @@ class MDAFormEngine:
         else:
             filename = 'form_data.json'
         
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        # 检查是否有ID字段，判断是新增还是更新
+        record_id = data.get('id')
         
-        messagebox.showinfo('保存成功', f'表单数据已保存到 {filename}')
+        # 加载现有数据
+        records = self.get_records(filename)
+        
+        if record_id:
+            # 更新现有记录
+            updated = False
+            for i, record in enumerate(records):
+                if record.get('id') == record_id:
+                    records[i] = data
+                    updated = True
+                    break
+            if not updated:
+                # 如果没找到记录，添加为新记录
+                records.append(data)
+            message = '记录已更新'
+        else:
+            # 新增记录，生成唯一ID
+            import time
+            import random
+            new_id = f'{int(time.time())}{random.randint(1000, 9999)}'
+            data['id'] = new_id
+            data['created_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+            records.append(data)
+            message = '记录已添加'
+        
+        # 保存数据
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(records, f, ensure_ascii=False, indent=2)
+        
+        messagebox.showinfo('操作成功', message)
+        
+        # 刷新数据列表
+        self.refresh_data_list()
+        
+        # 保存成功后隐藏字段区域
+        self.fields_frame.pack_forget()
     
-    def load_data(self):
+    def load_data(self, record_id=None):
         # 为每个单据创建独立的数据文件
         if self.current_module and self.current_form:
             filename = f'data_{self.current_module}_{self.current_form}.json'
@@ -180,21 +263,116 @@ class MDAFormEngine:
         
         if os.path.exists(filename):
             try:
-                with open(filename, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                
-                for field_name, value in data.items():
-                    widget = self.field_widgets.get(field_name)
-                    if widget:
-                        if hasattr(widget, 'delete') and hasattr(widget, 'insert'):
-                            widget.delete(0, tk.END)
-                            widget.insert(0, value)
-                        elif hasattr(widget, 'set'):
-                            widget.set(value)
-                
-                messagebox.showinfo('加载成功', f'历史数据已加载 from {filename}')
+                if record_id:
+                    # 加载特定记录
+                    record = self.get_record_by_id(filename, record_id)
+                    if record:
+                        for field_name, value in record.items():
+                            widget = self.field_widgets.get(field_name)
+                            if widget:
+                                if hasattr(widget, 'delete') and hasattr(widget, 'insert'):
+                                    widget.delete(0, tk.END)
+                                    widget.insert(0, value)
+                                elif hasattr(widget, 'set'):
+                                    widget.set(value)
+                        messagebox.showinfo('加载成功', '记录数据已加载')
+                    else:
+                        messagebox.showerror('加载错误', '记录不存在')
+                else:
+                    # 加载数据列表
+                    self.refresh_data_list()
             except Exception as e:
                 messagebox.showerror('加载错误', f'加载数据失败: {e}')
+        else:
+            # 首次使用，显示空列表
+            self.refresh_data_list()
+    
+    def get_records(self, filename):
+        """获取记录列表"""
+        if os.path.exists(filename):
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    records = json.load(f)
+                # 确保返回的是列表
+                if isinstance(records, list):
+                    return records
+                else:
+                    # 兼容旧格式，将单个对象转换为列表
+                    return [records]
+            except:
+                return []
+        else:
+            return []
+    
+    def get_record_by_id(self, filename, record_id):
+        """根据ID获取记录"""
+        records = self.get_records(filename)
+        for record in records:
+            if record.get('id') == record_id:
+                return record
+        return None
+    
+    def refresh_data_list(self):
+        """刷新数据列表"""
+        if self.current_module and self.current_form:
+            # 显示加载状态
+            if hasattr(self, 'form_title_label'):
+                original_text = self.form_title_label.cget('text')
+                self.form_title_label.config(text=f'{original_text} - 加载中...')
+                self.root.update()  # 强制更新界面
+            
+            # 重新切换到当前表单，触发数据列表刷新
+            self.switch_form(self.current_module, self.current_form)
+            
+            # 恢复原始标题
+            if hasattr(self, 'form_title_label'):
+                self.form_title_label.config(text=f'{self.current_form}信息')
+    
+    def delete_record(self, record_id):
+        """删除记录"""
+        if not record_id:
+            messagebox.showerror('错误', '请选择要删除的记录')
+            return
+        
+        # 为每个单据创建独立的数据文件
+        if self.current_module and self.current_form:
+            filename = f'data_{self.current_module}_{self.current_form}.json'
+        else:
+            filename = 'form_data.json'
+        
+        if os.path.exists(filename):
+            try:
+                # 加载现有数据
+                records = self.get_records(filename)
+                
+                # 找到并删除记录
+                original_count = len(records)
+                records = [record for record in records if record.get('id') != record_id]
+                
+                if len(records) < original_count:
+                    # 保存数据
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        json.dump(records, f, ensure_ascii=False, indent=2)
+                    
+                    messagebox.showinfo('操作成功', '记录已删除')
+                    # 刷新数据列表
+                    self.refresh_data_list()
+                else:
+                    messagebox.showerror('错误', '记录不存在')
+            except Exception as e:
+                messagebox.showerror('错误', f'删除记录失败: {e}')
+        else:
+            messagebox.showerror('错误', '数据文件不存在')
+    
+    def add_record(self):
+        """添加新记录"""
+        # 重置表单，准备添加新记录
+        self.reset_form()
+    
+    def update_record(self, record_id):
+        """更新现有记录"""
+        # 加载记录数据到表单
+        self.load_data(record_id)
     
     def reset_form(self):
         for widget in self.field_widgets.values():
@@ -202,7 +380,7 @@ class MDAFormEngine:
                 widget.delete(0, tk.END)
             elif hasattr(widget, 'set'):
                 widget.set('')
-        messagebox.showinfo('重置成功', '表单已重置')
+        messagebox.showinfo('重置成功', '表单已重置，可添加新记录')
     
     def create_form(self):
         self.root = tk.Tk()
@@ -357,23 +535,23 @@ class MDAFormEngine:
         left_actions = tk.Frame(action_frame, bg='#ffffff')
         left_actions.pack(side=tk.LEFT, padx=10, pady=5)
         
-        new_btn = tk.Button(left_actions, text='新增', command=self.save_data, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
+        new_btn = tk.Button(left_actions, text='新增', command=self.add_record, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
         new_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
-        edit_btn = tk.Button(left_actions, text='修改', command=self.load_data, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
+        edit_btn = tk.Button(left_actions, text='修改', command=self.edit_selected_record, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
         edit_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
-        delete_btn = tk.Button(left_actions, text='删除', command=self.reset_form, width=8, height=1, bg='#ff4d4f', fg='white', font=('SimHei', 9, 'bold'))
+        delete_btn = tk.Button(left_actions, text='删除', command=self.delete_selected_record, width=8, height=1, bg='#ff4d4f', fg='white', font=('SimHei', 9, 'bold'))
         delete_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
         # 右侧操作按钮
         right_actions = tk.Frame(action_frame, bg='#ffffff')
         right_actions.pack(side=tk.RIGHT, padx=10, pady=5)
         
-        refresh_btn = tk.Button(right_actions, text='刷新', command=self.load_data, width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9, 'bold'))
+        refresh_btn = tk.Button(right_actions, text='刷新', command=self.refresh_data_list, width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9, 'bold'))
         refresh_btn.pack(side=tk.RIGHT, padx=5, pady=5)
         
-        export_btn = tk.Button(right_actions, text='导出', command=self.save_data, width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9, 'bold'))
+        export_btn = tk.Button(right_actions, text='导出', command=self.export_data, width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9, 'bold'))
         export_btn.pack(side=tk.RIGHT, padx=5, pady=5)
         
         # 表单容器
@@ -472,68 +650,71 @@ class MDAFormEngine:
             widget.destroy()
         self.field_widgets.clear()
         
-        # 模拟数据，用于测试表格布局
-        if form_name == '采购订单' or form_name == '销售订单':
-            # 显示表格布局
-            test_data = [
-                {'订单编号': 'PO20260210001', '供应商': '上海金蝶软件有限公司', '金额': '10000.00', '状态': '已审核', '创建日期': '2026-02-10'},
-                {'订单编号': 'PO20260210002', '供应商': '北京用友网络科技股份有限公司', '金额': '20000.00', '状态': '未审核', '创建日期': '2026-02-10'},
-                {'订单编号': 'PO20260210003', '供应商': '深圳华为技术有限公司', '金额': '30000.00', '状态': '已审核', '创建日期': '2026-02-09'},
-                {'订单编号': 'PO20260210004', '供应商': '杭州阿里巴巴网络技术有限公司', '金额': '40000.00', '状态': '未审核', '创建日期': '2026-02-09'},
-                {'订单编号': 'PO20260210005', '供应商': '腾讯科技(深圳)有限公司', '金额': '50000.00', '状态': '已审核', '创建日期': '2026-02-08'}
-            ]
-            self.render_table(test_data)
+        # 加载并显示实际数据列表
+        filename = f'data_{self.current_module}_{self.current_form}.json'
+        records = self.get_records(filename)
+        
+        if records:
+            # 显示数据列表
+            self.render_table(records)
         else:
-            # 渲染字段
-            self.render_fields()
-            # 加载表单数据
-            self.load_data()
+            # 显示空数据提示
+            empty_data = [{'提示': '暂无数据，请点击新增按钮添加记录'}]
+            self.render_table(empty_data)
+        
+        # 渲染字段（默认隐藏，点击编辑时显示）
+        self.render_fields()
+        # 隐藏字段区域
+        self.fields_frame.pack_forget()
     
     def render_fields(self):
         """渲染字段"""
-        # 计算最大字段数量和布局
-        max_columns = 2
-        field_count = 0
+        # 清空现有内容
+        for widget in self.fields_frame.winfo_children():
+            widget.destroy()
         
+        # 创建字段容器
+        fields_container = tk.Frame(self.fields_frame, bg='#ffffff')
+        fields_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 为每个字段创建一行
         for field_name, field_info in self.fields.items():
             if not self.is_visible(field_info['visible_ext']):
                 continue
             
-            # 计算行列位置
-            row = field_count // max_columns
-            col = field_count % max_columns
+            # 创建行框架
+            field_row = tk.Frame(fields_container, bg='#ffffff')
+            field_row.pack(fill=tk.X, pady=8, padx=10)
             
             # 字段标签
-            label_frame = tk.Frame(self.fields_frame, bg='#ffffff')
-            label_frame.grid(row=row, column=col*2, padx=15, pady=12, sticky=tk.W)
+            label_frame = tk.Frame(field_row, bg='#ffffff')
+            label_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y)
             label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15, fg='#333333')
             label.pack(pady=2, anchor=tk.W)
             
             # 字段输入控件
-            input_frame = tk.Frame(self.fields_frame, bg='#ffffff')
-            input_frame.grid(row=row, column=col*2+1, padx=15, pady=12, sticky=tk.W)
+            input_frame = tk.Frame(field_row, bg='#ffffff')
+            input_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y, expand=True)
             
             if field_info['type'] == 'TextField':
                 if field_info['height'] > 30:
-                    text_widget = tk.Text(input_frame, wrap=tk.WORD, width=35, height=4, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
-                    text_widget.pack(pady=2)
+                    text_widget = tk.Text(input_frame, wrap=tk.WORD, width=50, height=4, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                    text_widget.pack(pady=2, fill=tk.X, expand=True)
                     text_widget.bind('<KeyRelease>', lambda e, w=text_widget, l=field_info['length']: self.limit_text(w, l))
                     self.field_widgets[field_name] = text_widget
                 else:
-                    entry = tk.Entry(input_frame, width=35, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
-                    entry.pack(pady=2)
+                    entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                    entry.pack(pady=2, fill=tk.X, expand=True)
                     entry.bind('<KeyRelease>', lambda e, w=entry, l=field_info['length']: self.limit_text(w, l))
                     self.field_widgets[field_name] = entry
             elif field_info['type'] == 'ComboBox':
-                combobox = ttk.Combobox(input_frame, values=field_info['options'], width=33, font=('SimHei', 10))
-                combobox.pack(pady=2)
+                combobox = ttk.Combobox(input_frame, values=field_info['options'], width=48, font=('SimHei', 10))
+                combobox.pack(pady=2, fill=tk.X, expand=True)
                 self.field_widgets[field_name] = combobox
             elif field_info['type'] == 'MoneyField':
-                entry = tk.Entry(input_frame, width=35, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
-                entry.pack(pady=2)
+                entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                entry.pack(pady=2, fill=tk.X, expand=True)
                 self.field_widgets[field_name] = entry
-            
-            field_count += 1
     
     def render_table(self, data):
         """渲染表格数据"""
@@ -554,27 +735,29 @@ class MDAFormEngine:
             scrollbar_x = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL)
             
             # 创建表格
-            table = ttk.Treeview(table_frame, 
+            self.table = ttk.Treeview(table_frame, 
                                 columns=columns, 
                                 show='headings', 
                                 yscrollcommand=scrollbar_y.set, 
                                 xscrollcommand=scrollbar_x.set)
             
             # 配置滚动条
-            scrollbar_y.config(command=table.yview)
+            scrollbar_y.config(command=self.table.yview)
             scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
             
-            scrollbar_x.config(command=table.xview)
+            scrollbar_x.config(command=self.table.xview)
             scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
             
             # 设置列标题
             for col in columns:
-                table.heading(col, text=col)
-                table.column(col, width=120, anchor=tk.CENTER)
+                self.table.heading(col, text=col)
+                self.table.column(col, width=120, anchor=tk.CENTER)
             
             # 填充数据
             for row in data:
-                table.insert('', tk.END, values=list(row.values()))
+                # 存储ID作为item的tags
+                item_id = row.get('id', '')
+                self.table.insert('', tk.END, values=list(row.values()), tags=(item_id,))
             
             # 定制表格样式
             style = ttk.Style()
@@ -588,29 +771,60 @@ class MDAFormEngine:
                      background=[('selected', '#e6f7ff'), ('hover', '#f5f5f5')],
                      foreground=[('selected', '#1890ff')])
             
-            table.configure(style='Custom.Treeview')
-            table.pack(fill=tk.BOTH, expand=True)
+            # 添加交替行颜色
+            style.configure('Custom.Treeview.Row',
+                           background=[('odd', '#ffffff'), ('even', '#f9f9f9')])
+            
+            self.table.configure(style='Custom.Treeview')
+            self.table.pack(fill=tk.BOTH, expand=True)
+            
+            # 绑定表格点击事件
+            self.table.bind('<ButtonRelease-1>', self.on_table_click)
+            # 绑定表格双击事件，支持双击编辑
+            self.table.bind('<Double-1>', self.on_table_double_click)
+            
+            # 表格操作按钮
+            table_buttons_frame = tk.Frame(self.fields_frame, bg='#ffffff')
+            table_buttons_frame.pack(fill=tk.X, padx=10, pady=10)
+            
+            # 左侧按钮
+            left_buttons = tk.Frame(table_buttons_frame, bg='#ffffff')
+            left_buttons.pack(side=tk.LEFT, padx=10, pady=5)
+            
+            refresh_btn = tk.Button(left_buttons, text='刷新', command=self.refresh_data_list, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
+            refresh_btn.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            # 右侧按钮
+            right_buttons = tk.Frame(table_buttons_frame, bg='#ffffff')
+            right_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
+            
+            edit_btn = tk.Button(right_buttons, text='编辑选中', command=self.edit_selected_record, width=10, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
+            edit_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+            
+            delete_btn = tk.Button(right_buttons, text='删除选中', command=self.delete_selected_record, width=10, height=1, bg='#ff4d4f', fg='white', font=('SimHei', 9, 'bold'))
+            delete_btn.pack(side=tk.RIGHT, padx=5, pady=5)
             
             # 分页控件
             pagination_frame = tk.Frame(self.fields_frame, bg='#ffffff')
             pagination_frame.pack(fill=tk.X, padx=10, pady=10)
             
-            page_info = tk.Label(pagination_frame, text='共 100 条记录，第 1/10 页', font=('SimHei', 9), bg='#ffffff', fg='#666666')
+            total_records = len(data)
+            page_info = tk.Label(pagination_frame, text=f'共 {total_records} 条记录，第 1/1 页', font=('SimHei', 9), bg='#ffffff', fg='#666666')
             page_info.pack(side=tk.LEFT, padx=10, pady=5)
             
             page_buttons = tk.Frame(pagination_frame, bg='#ffffff')
             page_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
             
-            first_btn = tk.Button(page_buttons, text='首页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9))
+            first_btn = tk.Button(page_buttons, text='首页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
             first_btn.pack(side=tk.LEFT, padx=5, pady=5)
             
-            prev_btn = tk.Button(page_buttons, text='上一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9))
+            prev_btn = tk.Button(page_buttons, text='上一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
             prev_btn.pack(side=tk.LEFT, padx=5, pady=5)
             
-            next_btn = tk.Button(page_buttons, text='下一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9))
+            next_btn = tk.Button(page_buttons, text='下一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
             next_btn.pack(side=tk.LEFT, padx=5, pady=5)
             
-            last_btn = tk.Button(page_buttons, text='末页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9))
+            last_btn = tk.Button(page_buttons, text='末页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
             last_btn.pack(side=tk.LEFT, padx=5, pady=5)
     
     def initialize_first_form(self):
@@ -711,6 +925,89 @@ class MDAFormEngine:
         help_window.grab_set()
         self.root.wait_window(help_window)
     
+    def on_table_click(self, event):
+        """表格点击事件"""
+        # 这里可以添加表格点击的处理逻辑
+        pass
+    
+    def on_table_double_click(self, event):
+        """表格双击事件，支持双击编辑"""
+        selected_items = self.table.selection()
+        if selected_items:
+            self.edit_selected_record()
+    
+    def edit_selected_record(self):
+        """编辑选中的记录"""
+        selected_items = self.table.selection()
+        if not selected_items:
+            messagebox.showinfo('提示', '请选择要编辑的记录')
+            return
+        
+        item = selected_items[0]
+        # 获取记录ID
+        tags = self.table.item(item, 'tags')
+        if tags:
+            record_id = tags[0]
+            if record_id:
+                # 显示字段区域
+                self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+                # 加载记录数据
+                self.load_data(record_id)
+            else:
+                messagebox.showinfo('提示', '该记录无法编辑')
+    
+    def delete_selected_record(self):
+        """删除选中的记录"""
+        selected_items = self.table.selection()
+        if not selected_items:
+            messagebox.showinfo('提示', '请选择要删除的记录')
+            return
+        
+        item = selected_items[0]
+        # 获取记录ID
+        tags = self.table.item(item, 'tags')
+        if tags:
+            record_id = tags[0]
+            if record_id:
+                if messagebox.askyesno('确认', '确定要删除这条记录吗？'):
+                    self.delete_record(record_id)
+            else:
+                messagebox.showinfo('提示', '该记录无法删除')
+    
+    def export_data(self):
+        """导出数据"""
+        # 为每个单据创建独立的数据文件
+        if self.current_module and self.current_form:
+            filename = f'data_{self.current_module}_{self.current_form}.json'
+        else:
+            filename = 'form_data.json'
+        
+        if os.path.exists(filename):
+            try:
+                # 加载数据
+                records = self.get_records(filename)
+                
+                # 导出为CSV文件
+                import csv
+                export_filename = f'export_{self.current_module}_{self.current_form}.csv'
+                
+                if records:
+                    # 获取所有字段名
+                    fieldnames = list(records[0].keys())
+                    
+                    with open(export_filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
+                        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                        writer.writeheader()
+                        writer.writerows(records)
+                    
+                    messagebox.showinfo('导出成功', f'数据已导出到 {export_filename}')
+                else:
+                    messagebox.showinfo('提示', '没有数据可导出')
+            except Exception as e:
+                messagebox.showerror('导出错误', f'导出数据失败: {e}')
+        else:
+            messagebox.showinfo('提示', '没有数据可导出')
+    
     def show_guide(self):
         """显示操作引导"""
         guide_window = tk.Toplevel(self.root)
@@ -736,10 +1033,11 @@ class MDAFormEngine:
         # 引导步骤
         guide_steps = [
             "1. 打开表单系统",
-            "2. 填写表单字段",
-            "3. 点击保存按钮保存数据",
-            "4. 点击加载按钮恢复数据",
-            "5. 点击提交按钮验证并提交"
+            "2. 在左侧选择要操作的模块和单据",
+            "3. 点击新增按钮添加新记录",
+            "4. 填写表单字段并点击保存",
+            "5. 在数据列表中选择记录进行编辑或删除",
+            "6. 点击刷新按钮查看最新数据"
         ]
         
         steps_frame = tk.Frame(content_frame, bg='#ffffff')

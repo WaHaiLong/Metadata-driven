@@ -34,5 +34,5 @@
                 </Form>
             </Forms>
         </Module>
-    </Modules>
+    <Module name="仓库管理"><Forms /><Forms><Form name="即时库存"><FieldList /></Form></Forms><Forms><Form name="仓库管理"><FieldList /></Form></Forms><Forms><Form name="即时库存"><FieldList /></Form></Forms></Module></Modules>
 </FormMetadata>

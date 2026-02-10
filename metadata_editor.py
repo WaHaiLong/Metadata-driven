@@ -1317,7 +1317,9 @@ class MetadataEditor:
         module_name = ''
         if len(tags) != 2:
             # 尝试获取模块名称
-            module_name = self.nav_tree.item(item, 'text')
+            module_text = self.nav_tree.item(item, 'text')
+            # 移除图标部分，只保留纯模块名称
+            module_name = module_text.split(' ', 1)[1] if ' ' in module_text else module_text
             if module_name not in self.modules:
                 messagebox.showerror('错误', '请先选择一个模块')
                 return
