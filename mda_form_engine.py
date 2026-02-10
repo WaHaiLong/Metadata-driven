@@ -28,7 +28,7 @@ class MDAFormEngine:
         else:
             # 向后兼容：旧格式
             form = root.find('Form')
-            if form:
+            if form is not None:
                 self.form_name = form.get('name')
                 self.load_fields(form.find('FieldList'))
     
@@ -68,7 +68,7 @@ class MDAFormEngine:
                                 field_info['length'] = int(field_elem.get('Length', 10))
                             
                             validation = field_elem.find('Validation')
-                            if validation:
+                            if validation is not None:
                                 field_info['validation'] = {}
                                 if validation.find('Required') is not None:
                                     field_info['validation']['required'] = validation.find('Required').text == '1'
@@ -99,7 +99,7 @@ class MDAFormEngine:
                 field_info['length'] = int(field_elem.get('Length', 10))
             
             validation = field_elem.find('Validation')
-            if validation:
+            if validation is not None:
                 field_info['validation'] = {}
                 if validation.find('Required') is not None:
                     field_info['validation']['required'] = validation.find('Required').text == '1'
