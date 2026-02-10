@@ -246,13 +246,16 @@ class MDAFormEngine:
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(records, f, ensure_ascii=False, indent=2)
         
-        messagebox.showinfo('操作成功', message)
+        # 只在GUI环境中显示消息框
+        if hasattr(self, 'root') and self.root is not None:
+            messagebox.showinfo('操作成功', message)
         
         # 刷新数据列表
         self.refresh_data_list()
         
         # 保存成功后隐藏字段区域
-        self.fields_frame.pack_forget()
+        if hasattr(self, 'fields_frame'):
+            self.fields_frame.pack_forget()
     
     def load_data(self, record_id=None):
         # 为每个单据创建独立的数据文件
@@ -315,18 +318,20 @@ class MDAFormEngine:
     def refresh_data_list(self):
         """刷新数据列表"""
         if self.current_module and self.current_form:
-            # 显示加载状态
-            if hasattr(self, 'form_title_label'):
-                original_text = self.form_title_label.cget('text')
-                self.form_title_label.config(text=f'{original_text} - 加载中...')
-                self.root.update()  # 强制更新界面
-            
-            # 重新切换到当前表单，触发数据列表刷新
-            self.switch_form(self.current_module, self.current_form)
-            
-            # 恢复原始标题
-            if hasattr(self, 'form_title_label'):
-                self.form_title_label.config(text=f'{self.current_form}信息')
+            # 只有在UI初始化后才更新界面
+            if hasattr(self, 'root') and self.root is not None:
+                # 显示加载状态
+                if hasattr(self, 'form_title_label'):
+                    original_text = self.form_title_label.cget('text')
+                    self.form_title_label.config(text=f'{original_text} - 加载中...')
+                    self.root.update()  # 强制更新界面
+                
+                # 重新切换到当前表单，触发数据列表刷新
+                self.switch_form(self.current_module, self.current_form)
+                
+                # 恢复原始标题
+                if hasattr(self, 'form_title_label'):
+                    self.form_title_label.config(text=f'{self.current_form}信息')
     
     def delete_record(self, record_id):
         """删除记录"""
@@ -368,6 +373,9 @@ class MDAFormEngine:
         """添加新记录"""
         # 重置表单，准备添加新记录
         self.reset_form()
+        # 显示字段区域，让用户输入新记录数据
+        if hasattr(self, 'fields_frame'):
+            self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
     
     def update_record(self, record_id):
         """更新现有记录"""
@@ -641,191 +649,200 @@ class MDAFormEngine:
         # 设置当前表单
         self.set_current_form(module_name, form_name)
         
-        # 更新标题
-        self.root.title(f"{module_name} - {form_name}")
-        self.form_title_label.config(text=f"{form_name}信息")
-        
-        # 清空现有字段控件
-        for widget in self.fields_frame.winfo_children():
-            widget.destroy()
-        self.field_widgets.clear()
-        
-        # 加载并显示实际数据列表
-        filename = f'data_{self.current_module}_{self.current_form}.json'
-        records = self.get_records(filename)
-        
-        if records:
-            # 显示数据列表
-            self.render_table(records)
-        else:
-            # 显示空数据提示
-            empty_data = [{'提示': '暂无数据，请点击新增按钮添加记录'}]
-            self.render_table(empty_data)
-        
-        # 渲染字段（默认隐藏，点击编辑时显示）
-        self.render_fields()
-        # 隐藏字段区域
-        self.fields_frame.pack_forget()
+        # 只有在UI初始化后才更新界面
+        if hasattr(self, 'root') and self.root is not None:
+            # 更新标题
+            self.root.title(f"{module_name} - {form_name}")
+            if hasattr(self, 'form_title_label'):
+                self.form_title_label.config(text=f"{form_name}信息")
+            
+            # 清空现有字段控件
+            if hasattr(self, 'fields_frame'):
+                for widget in self.fields_frame.winfo_children():
+                    widget.destroy()
+            self.field_widgets.clear()
+            
+            # 加载并显示实际数据列表
+            filename = f'data_{self.current_module}_{self.current_form}.json'
+            records = self.get_records(filename)
+            
+            if records:
+                # 显示数据列表
+                self.render_table(records)
+            else:
+                # 显示空数据提示
+                empty_data = [{'提示': '暂无数据，请点击新增按钮添加记录'}]
+                self.render_table(empty_data)
+            
+            # 渲染字段（默认隐藏，点击编辑时显示）
+            self.render_fields()
+            # 隐藏字段区域
+            if hasattr(self, 'fields_frame'):
+                self.fields_frame.pack_forget()
     
     def render_fields(self):
         """渲染字段"""
-        # 清空现有内容
-        for widget in self.fields_frame.winfo_children():
-            widget.destroy()
-        
-        # 创建字段容器
-        fields_container = tk.Frame(self.fields_frame, bg='#ffffff')
-        fields_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # 为每个字段创建一行
-        for field_name, field_info in self.fields.items():
-            if not self.is_visible(field_info['visible_ext']):
-                continue
+        # 只有在UI初始化后才渲染字段
+        if hasattr(self, 'fields_frame'):
+            # 清空现有内容
+            for widget in self.fields_frame.winfo_children():
+                widget.destroy()
             
-            # 创建行框架
-            field_row = tk.Frame(fields_container, bg='#ffffff')
-            field_row.pack(fill=tk.X, pady=8, padx=10)
+            # 创建字段容器
+            fields_container = tk.Frame(self.fields_frame, bg='#ffffff')
+            fields_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
             
-            # 字段标签
-            label_frame = tk.Frame(field_row, bg='#ffffff')
-            label_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y)
-            label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15, fg='#333333')
-            label.pack(pady=2, anchor=tk.W)
-            
-            # 字段输入控件
-            input_frame = tk.Frame(field_row, bg='#ffffff')
-            input_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y, expand=True)
-            
-            if field_info['type'] == 'TextField':
-                if field_info['height'] > 30:
-                    text_widget = tk.Text(input_frame, wrap=tk.WORD, width=50, height=4, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
-                    text_widget.pack(pady=2, fill=tk.X, expand=True)
-                    text_widget.bind('<KeyRelease>', lambda e, w=text_widget, l=field_info['length']: self.limit_text(w, l))
-                    self.field_widgets[field_name] = text_widget
-                else:
+            # 为每个字段创建一行
+            for field_name, field_info in self.fields.items():
+                if not self.is_visible(field_info['visible_ext']):
+                    continue
+                
+                # 创建行框架
+                field_row = tk.Frame(fields_container, bg='#ffffff')
+                field_row.pack(fill=tk.X, pady=8, padx=10)
+                
+                # 字段标签
+                label_frame = tk.Frame(field_row, bg='#ffffff')
+                label_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y)
+                label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15, fg='#333333')
+                label.pack(pady=2, anchor=tk.W)
+                
+                # 字段输入控件
+                input_frame = tk.Frame(field_row, bg='#ffffff')
+                input_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y, expand=True)
+                
+                if field_info['type'] == 'TextField':
+                    if field_info['height'] > 30:
+                        text_widget = tk.Text(input_frame, wrap=tk.WORD, width=50, height=4, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                        text_widget.pack(pady=2, fill=tk.X, expand=True)
+                        text_widget.bind('<KeyRelease>', lambda e, w=text_widget, l=field_info['length']: self.limit_text(w, l))
+                        self.field_widgets[field_name] = text_widget
+                    else:
+                        entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                        entry.pack(pady=2, fill=tk.X, expand=True)
+                        entry.bind('<KeyRelease>', lambda e, w=entry, l=field_info['length']: self.limit_text(w, l))
+                        self.field_widgets[field_name] = entry
+                elif field_info['type'] == 'ComboBox':
+                    combobox = ttk.Combobox(input_frame, values=field_info['options'], width=48, font=('SimHei', 10))
+                    combobox.pack(pady=2, fill=tk.X, expand=True)
+                    self.field_widgets[field_name] = combobox
+                elif field_info['type'] == 'MoneyField':
                     entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
                     entry.pack(pady=2, fill=tk.X, expand=True)
-                    entry.bind('<KeyRelease>', lambda e, w=entry, l=field_info['length']: self.limit_text(w, l))
                     self.field_widgets[field_name] = entry
-            elif field_info['type'] == 'ComboBox':
-                combobox = ttk.Combobox(input_frame, values=field_info['options'], width=48, font=('SimHei', 10))
-                combobox.pack(pady=2, fill=tk.X, expand=True)
-                self.field_widgets[field_name] = combobox
-            elif field_info['type'] == 'MoneyField':
-                entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
-                entry.pack(pady=2, fill=tk.X, expand=True)
-                self.field_widgets[field_name] = entry
     
     def render_table(self, data):
         """渲染表格数据"""
-        # 清空现有内容
-        for widget in self.fields_frame.winfo_children():
-            widget.destroy()
-        
-        # 创建表格
-        columns = list(data[0].keys()) if data else []
-        
-        if columns:
-            # 创建表格框架
-            table_frame = tk.Frame(self.fields_frame, bg='#ffffff')
-            table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-            
-            # 创建滚动条
-            scrollbar_y = ttk.Scrollbar(table_frame, orient=tk.VERTICAL)
-            scrollbar_x = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL)
+        # 只有在UI初始化后才渲染表格
+        if hasattr(self, 'fields_frame'):
+            # 清空现有内容
+            for widget in self.fields_frame.winfo_children():
+                widget.destroy()
             
             # 创建表格
-            self.table = ttk.Treeview(table_frame, 
-                                columns=columns, 
-                                show='headings', 
-                                yscrollcommand=scrollbar_y.set, 
-                                xscrollcommand=scrollbar_x.set)
+            columns = list(data[0].keys()) if data else []
             
-            # 配置滚动条
-            scrollbar_y.config(command=self.table.yview)
-            scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
-            
-            scrollbar_x.config(command=self.table.xview)
-            scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
-            
-            # 设置列标题
-            for col in columns:
-                self.table.heading(col, text=col)
-                self.table.column(col, width=120, anchor=tk.CENTER)
-            
-            # 填充数据
-            for row in data:
-                # 存储ID作为item的tags
-                item_id = row.get('id', '')
-                self.table.insert('', tk.END, values=list(row.values()), tags=(item_id,))
-            
-            # 定制表格样式
-            style = ttk.Style()
-            style.configure('Custom.Treeview', 
-                           background='#ffffff', 
-                           foreground='#333333', 
-                           rowheight=25, 
-                           fieldbackground='#ffffff',
-                           font=('SimHei', 9))
-            style.map('Custom.Treeview',
-                     background=[('selected', '#e6f7ff'), ('hover', '#f5f5f5')],
-                     foreground=[('selected', '#1890ff')])
-            
-            # 添加交替行颜色
-            style.configure('Custom.Treeview.Row',
-                           background=[('odd', '#ffffff'), ('even', '#f9f9f9')])
-            
-            self.table.configure(style='Custom.Treeview')
-            self.table.pack(fill=tk.BOTH, expand=True)
-            
-            # 绑定表格点击事件
-            self.table.bind('<ButtonRelease-1>', self.on_table_click)
-            # 绑定表格双击事件，支持双击编辑
-            self.table.bind('<Double-1>', self.on_table_double_click)
-            
-            # 表格操作按钮
-            table_buttons_frame = tk.Frame(self.fields_frame, bg='#ffffff')
-            table_buttons_frame.pack(fill=tk.X, padx=10, pady=10)
-            
-            # 左侧按钮
-            left_buttons = tk.Frame(table_buttons_frame, bg='#ffffff')
-            left_buttons.pack(side=tk.LEFT, padx=10, pady=5)
-            
-            refresh_btn = tk.Button(left_buttons, text='刷新', command=self.refresh_data_list, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
-            refresh_btn.pack(side=tk.LEFT, padx=5, pady=5)
-            
-            # 右侧按钮
-            right_buttons = tk.Frame(table_buttons_frame, bg='#ffffff')
-            right_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
-            
-            edit_btn = tk.Button(right_buttons, text='编辑选中', command=self.edit_selected_record, width=10, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
-            edit_btn.pack(side=tk.RIGHT, padx=5, pady=5)
-            
-            delete_btn = tk.Button(right_buttons, text='删除选中', command=self.delete_selected_record, width=10, height=1, bg='#ff4d4f', fg='white', font=('SimHei', 9, 'bold'))
-            delete_btn.pack(side=tk.RIGHT, padx=5, pady=5)
-            
-            # 分页控件
-            pagination_frame = tk.Frame(self.fields_frame, bg='#ffffff')
-            pagination_frame.pack(fill=tk.X, padx=10, pady=10)
-            
-            total_records = len(data)
-            page_info = tk.Label(pagination_frame, text=f'共 {total_records} 条记录，第 1/1 页', font=('SimHei', 9), bg='#ffffff', fg='#666666')
-            page_info.pack(side=tk.LEFT, padx=10, pady=5)
-            
-            page_buttons = tk.Frame(pagination_frame, bg='#ffffff')
-            page_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
-            
-            first_btn = tk.Button(page_buttons, text='首页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
-            first_btn.pack(side=tk.LEFT, padx=5, pady=5)
-            
-            prev_btn = tk.Button(page_buttons, text='上一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
-            prev_btn.pack(side=tk.LEFT, padx=5, pady=5)
-            
-            next_btn = tk.Button(page_buttons, text='下一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
-            next_btn.pack(side=tk.LEFT, padx=5, pady=5)
-            
-            last_btn = tk.Button(page_buttons, text='末页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
-            last_btn.pack(side=tk.LEFT, padx=5, pady=5)
+            if columns:
+                # 创建表格框架
+                table_frame = tk.Frame(self.fields_frame, bg='#ffffff')
+                table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+                
+                # 创建滚动条
+                scrollbar_y = ttk.Scrollbar(table_frame, orient=tk.VERTICAL)
+                scrollbar_x = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL)
+                
+                # 创建表格
+                self.table = ttk.Treeview(table_frame, 
+                                    columns=columns, 
+                                    show='headings', 
+                                    yscrollcommand=scrollbar_y.set, 
+                                    xscrollcommand=scrollbar_x.set)
+                
+                # 配置滚动条
+                scrollbar_y.config(command=self.table.yview)
+                scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+                
+                scrollbar_x.config(command=self.table.xview)
+                scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+                
+                # 设置列标题
+                for col in columns:
+                    self.table.heading(col, text=col)
+                    self.table.column(col, width=120, anchor=tk.CENTER)
+                
+                # 填充数据
+                for row in data:
+                    # 存储ID作为item的tags
+                    item_id = row.get('id', '')
+                    self.table.insert('', tk.END, values=list(row.values()), tags=(item_id,))
+                
+                # 定制表格样式
+                style = ttk.Style()
+                style.configure('Custom.Treeview', 
+                               background='#ffffff', 
+                               foreground='#333333', 
+                               rowheight=25, 
+                               fieldbackground='#ffffff',
+                               font=('SimHei', 9))
+                style.map('Custom.Treeview',
+                         background=[('selected', '#e6f7ff'), ('hover', '#f5f5f5')],
+                         foreground=[('selected', '#1890ff')])
+                
+                # 添加交替行颜色
+                style.configure('Custom.Treeview.Row',
+                               background=[('odd', '#ffffff'), ('even', '#f9f9f9')])
+                
+                self.table.configure(style='Custom.Treeview')
+                self.table.pack(fill=tk.BOTH, expand=True)
+                
+                # 绑定表格点击事件
+                self.table.bind('<ButtonRelease-1>', self.on_table_click)
+                # 绑定表格双击事件，支持双击编辑
+                self.table.bind('<Double-1>', self.on_table_double_click)
+                
+                # 表格操作按钮
+                table_buttons_frame = tk.Frame(self.fields_frame, bg='#ffffff')
+                table_buttons_frame.pack(fill=tk.X, padx=10, pady=10)
+                
+                # 左侧按钮
+                left_buttons = tk.Frame(table_buttons_frame, bg='#ffffff')
+                left_buttons.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                refresh_btn = tk.Button(left_buttons, text='刷新', command=self.refresh_data_list, width=8, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
+                refresh_btn.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                # 右侧按钮
+                right_buttons = tk.Frame(table_buttons_frame, bg='#ffffff')
+                right_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
+                
+                edit_btn = tk.Button(right_buttons, text='编辑选中', command=self.edit_selected_record, width=10, height=1, bg='#1890ff', fg='white', font=('SimHei', 9, 'bold'))
+                edit_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+                
+                delete_btn = tk.Button(right_buttons, text='删除选中', command=self.delete_selected_record, width=10, height=1, bg='#ff4d4f', fg='white', font=('SimHei', 9, 'bold'))
+                delete_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+                
+                # 分页控件
+                pagination_frame = tk.Frame(self.fields_frame, bg='#ffffff')
+                pagination_frame.pack(fill=tk.X, padx=10, pady=10)
+                
+                total_records = len(data)
+                page_info = tk.Label(pagination_frame, text=f'共 {total_records} 条记录，第 1/1 页', font=('SimHei', 9), bg='#ffffff', fg='#666666')
+                page_info.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                page_buttons = tk.Frame(pagination_frame, bg='#ffffff')
+                page_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
+                
+                first_btn = tk.Button(page_buttons, text='首页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
+                first_btn.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                prev_btn = tk.Button(page_buttons, text='上一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
+                prev_btn.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                next_btn = tk.Button(page_buttons, text='下一页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
+                next_btn.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                last_btn = tk.Button(page_buttons, text='末页', width=6, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), state=tk.DISABLED)
+                last_btn.pack(side=tk.LEFT, padx=5, pady=5)
     
     def initialize_first_form(self):
         """初始化显示第一个表单"""
