@@ -76,6 +76,18 @@ class MDAFormEngine:
                                     field_info['validation']['number'] = validation.find('Number').text == '1'
                             
                             self.modules[module_name][form_name]['fields'][field_name] = field_info
+                    
+                    # 加载明细表格配置
+                    detail_table = form_elem.find('DetailTable')
+                    if detail_table is not None:
+                        self.modules[module_name][form_name]['detail_columns'] = []
+                        for column_elem in detail_table.findall('Column'):
+                            column_info = {
+                                'name': column_elem.get('name'),
+                                'width': int(column_elem.get('width', 100)),
+                                'type': column_elem.get('type', 'TextField')
+                            }
+                            self.modules[module_name][form_name]['detail_columns'].append(column_info)
     
     def load_fields(self, field_list_elem):
         """加载字段（旧格式）"""
@@ -127,6 +139,7 @@ class MDAFormEngine:
         """验证表单数据"""
         errors = []
         
+        # 验证主表数据
         for field_name, field_info in self.fields.items():
             if not self.is_visible(field_info['visible_ext']):
                 continue
@@ -173,6 +186,11 @@ class MDAFormEngine:
             if custom_error:
                 errors.append(custom_error)
         
+        # 验证明细数据
+        if hasattr(self, 'detail_tree') and self.detail_tree:
+            detail_errors = self.validate_detail_data()
+            errors.extend(detail_errors)
+        
         # 显示验证结果
         if errors:
             error_message = '\n'.join(errors)
@@ -181,6 +199,88 @@ class MDAFormEngine:
         else:
             messagebox.showinfo('验证成功', '表单验证通过')
             return True
+    
+    def validate_detail_data(self):
+        """验证明细数据"""
+        errors = []
+        if not hasattr(self, 'detail_tree') or not self.detail_tree:
+            return errors
+        
+        # 获取明细列配置
+        if self.current_module and self.current_form:
+            form_config = self.modules.get(self.current_module, {}).get(self.current_form, {})
+            detail_columns = form_config.get('detail_columns', [])
+            if detail_columns:
+                # 检查是否有数据
+                if not self.detail_tree.get_children():
+                    errors.append('明细表格不能为空')
+                    return errors
+                
+                # 验证每一行数据
+                for i, item in enumerate(self.detail_tree.get_children()):
+                    values = self.detail_tree.item(item, 'values')
+                    row_num = i + 1
+                    
+                    # 验证必填字段
+                    for j, col in enumerate(detail_columns):
+                        if j < len(values):
+                            value = values[j]
+                            # 这里可以根据列类型添加验证规则
+                            # 例如：物料编码和物料名称为必填
+                            if col['name'] in ['物料编码', '物料名称']:
+                                if not value:
+                                    errors.append(f'明细行 {row_num}：{col["name"]} 不能为空')
+                            # 验证数字字段
+                            if col['name'] in ['数量', '单价', '金额']:
+                                if value:
+                                    try:
+                                        float(value)
+                                    except ValueError:
+                                        errors.append(f'明细行 {row_num}：{col["name"]} 必须是数字')
+        
+        return errors
+    
+    def calculate_detail_amounts(self):
+        """计算明细数据的金额"""
+        if hasattr(self, 'detail_tree') and self.detail_tree:
+            # 获取明细列配置
+            if self.current_module and self.current_form:
+                form_config = self.modules.get(self.current_module, {}).get(self.current_form, {})
+                detail_columns = form_config.get('detail_columns', [])
+                if detail_columns:
+                    # 查找数量、单价、金额列的索引
+                    quantity_idx = -1
+                    price_idx = -1
+                    amount_idx = -1
+                    
+                    for i, col in enumerate(detail_columns):
+                        if col['name'] == '数量':
+                            quantity_idx = i
+                        elif col['name'] == '单价':
+                            price_idx = i
+                        elif col['name'] == '金额':
+                            amount_idx = i
+                    
+                    # 计算金额
+                    if quantity_idx != -1 and price_idx != -1 and amount_idx != -1:
+                        total_amount = 0
+                        for item in self.detail_tree.get_children():
+                            values = list(self.detail_tree.item(item, 'values'))
+                            try:
+                                quantity = float(values[quantity_idx]) if values[quantity_idx] else 0
+                                price = float(values[price_idx]) if values[price_idx] else 0
+                                amount = quantity * price
+                                values[amount_idx] = round(amount, 2)
+                                total_amount += amount
+                                # 更新金额字段
+                                self.detail_tree.item(item, values=values)
+                            except:
+                                pass
+                        
+                        # 可以在这里更新表头的总计金额
+                        return total_amount
+        
+        return 0
     
     def custom_validation(self, field_name, value, field_info):
         """自定义验证规则"""
@@ -207,6 +307,24 @@ class MDAFormEngine:
                 if isinstance(value, str):
                     value = value.strip()
                 data[field_name] = value
+        
+        # 添加明细数据
+        if hasattr(self, 'detail_tree') and self.detail_tree:
+            detail_data = []
+            for item in self.detail_tree.get_children():
+                values = self.detail_tree.item(item, 'values')
+                if values:
+                    # 获取明细列配置
+                    if self.current_module and self.current_form:
+                        form_config = self.modules.get(self.current_module, {}).get(self.current_form, {})
+                        detail_columns = form_config.get('detail_columns', [])
+                        if detail_columns:
+                            row_data = {}
+                            for i, column in enumerate(detail_columns):
+                                if i < len(values):
+                                    row_data[column['name']] = values[i]
+                            detail_data.append(row_data)
+            data['details'] = detail_data
         
         # 为每个单据创建独立的数据文件
         if self.current_module and self.current_form:
@@ -272,6 +390,9 @@ class MDAFormEngine:
                     record = self.get_record_by_id(filename, record_id)
                     if record:
                         for field_name, value in record.items():
+                            # 跳过明细数据，单独处理
+                            if field_name == 'details':
+                                continue
                             widget = self.field_widgets.get(field_name)
                             if widget:
                                 if hasattr(widget, 'delete') and hasattr(widget, 'insert'):
@@ -279,6 +400,25 @@ class MDAFormEngine:
                                     widget.insert(0, value)
                                 elif hasattr(widget, 'set'):
                                     widget.set(value)
+                        
+                        # 加载明细数据
+                        detail_data = record.get('details', [])
+                        if detail_data and hasattr(self, 'detail_tree') and self.detail_tree:
+                            # 清空现有明细数据
+                            for item in self.detail_tree.get_children():
+                                self.detail_tree.delete(item)
+                            # 添加明细数据
+                            for i, detail_row in enumerate(detail_data):
+                                # 获取明细列配置
+                                form_config = self.modules.get(self.current_module, {}).get(self.current_form, {})
+                                detail_columns = form_config.get('detail_columns', [])
+                                if detail_columns:
+                                    values = []
+                                    for column in detail_columns:
+                                        values.append(detail_row.get(column['name'], ''))
+                                    # 插入明细行
+                                    self.detail_tree.insert('', tk.END, values=values)
+                        
                         messagebox.showinfo('加载成功', '记录数据已加载')
                     else:
                         messagebox.showerror('加载错误', '记录不存在')
@@ -437,6 +577,51 @@ class MDAFormEngine:
                     entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
                     entry.pack(pady=2, fill=tk.X, expand=True)
                     self.field_widgets[field_name] = entry
+            
+            # 添加明细表格
+            if self.current_module and self.current_form:
+                form_config = self.modules.get(self.current_module, {}).get(self.current_form, {})
+                detail_columns = form_config.get('detail_columns', [])
+                if detail_columns:
+                    # 创建明细表格区域
+                    detail_frame = tk.Frame(fields_container, bg='#ffffff', relief=tk.RAISED, bd=1)
+                    detail_frame.pack(fill=tk.BOTH, expand=True, pady=15, padx=10)
+                    
+                    # 明细表格标题
+                    detail_title = tk.Label(detail_frame, text='明细信息', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+                    detail_title.pack(pady=10, padx=10, anchor=tk.W)
+                    
+                    # 创建明细表格
+                    columns = [col['name'] for col in detail_columns]
+                    self.detail_tree = ttk.Treeview(detail_frame, columns=columns, show='headings', height=10)
+                    
+                    # 设置表格列
+                    for i, col in enumerate(detail_columns):
+                        self.detail_tree.heading(col['name'], text=col['name'])
+                        self.detail_tree.column(col['name'], width=col['width'])
+                    
+                    # 添加滚动条
+                    scrollbar_y = ttk.Scrollbar(detail_frame, orient=tk.VERTICAL, command=self.detail_tree.yview)
+                    scrollbar_x = ttk.Scrollbar(detail_frame, orient=tk.HORIZONTAL, command=self.detail_tree.xview)
+                    self.detail_tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+                    
+                    # 布局表格和滚动条
+                    scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+                    scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+                    self.detail_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+                    
+                    # 明细表格操作按钮
+                    detail_buttons = tk.Frame(detail_frame, bg='#ffffff')
+                    detail_buttons.pack(fill=tk.X, pady=10, padx=10)
+                    
+                    add_row_btn = tk.Button(detail_buttons, text='添加行', command=self.add_detail_row, width=10, height=1, bg='#28a745', fg='white', font=('SimHei', 9, 'bold'))
+                    add_row_btn.pack(side=tk.LEFT, padx=5, pady=5)
+                    
+                    delete_row_btn = tk.Button(detail_buttons, text='删除行', command=self.delete_detail_row, width=10, height=1, bg='#dc3545', fg='white', font=('SimHei', 9, 'bold'))
+                    delete_row_btn.pack(side=tk.LEFT, padx=5, pady=5)
+                    
+                    calculate_btn = tk.Button(detail_buttons, text='计算金额', command=self.calculate_detail_amounts, width=10, height=1, bg='#17a2b8', fg='white', font=('SimHei', 9, 'bold'))
+                    calculate_btn.pack(side=tk.LEFT, padx=5, pady=5)
             
             # 显示字段区域
             self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
@@ -1036,6 +1221,48 @@ class MDAFormEngine:
                             entry.pack(pady=2, fill=tk.X, expand=True)
                             self.field_widgets[field_name] = entry
                     
+                    # 添加明细表格
+                    if self.current_module and self.current_form:
+                        form_config = self.modules.get(self.current_module, {}).get(self.current_form, {})
+                        detail_columns = form_config.get('detail_columns', [])
+                        if detail_columns:
+                            # 创建明细表格区域
+                            detail_frame = tk.Frame(fields_container, bg='#ffffff', relief=tk.RAISED, bd=1)
+                            detail_frame.pack(fill=tk.BOTH, expand=True, pady=15, padx=10)
+                            
+                            # 明细表格标题
+                            detail_title = tk.Label(detail_frame, text='明细信息', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+                            detail_title.pack(pady=10, padx=10, anchor=tk.W)
+                            
+                            # 创建明细表格
+                            columns = [col['name'] for col in detail_columns]
+                            self.detail_tree = ttk.Treeview(detail_frame, columns=columns, show='headings', height=10)
+                            
+                            # 设置表格列
+                            for i, col in enumerate(detail_columns):
+                                self.detail_tree.heading(col['name'], text=col['name'])
+                                self.detail_tree.column(col['name'], width=col['width'])
+                            
+                            # 添加滚动条
+                            scrollbar_y = ttk.Scrollbar(detail_frame, orient=tk.VERTICAL, command=self.detail_tree.yview)
+                            scrollbar_x = ttk.Scrollbar(detail_frame, orient=tk.HORIZONTAL, command=self.detail_tree.xview)
+                            self.detail_tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+                            
+                            # 布局表格和滚动条
+                            scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+                            scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+                            self.detail_tree.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+                            
+                            # 明细表格操作按钮
+                            detail_buttons = tk.Frame(detail_frame, bg='#ffffff')
+                            detail_buttons.pack(fill=tk.X, pady=10, padx=10)
+                            
+                            add_row_btn = tk.Button(detail_buttons, text='添加行', command=self.add_detail_row, width=10, height=1, bg='#28a745', fg='white', font=('SimHei', 9, 'bold'))
+                            add_row_btn.pack(side=tk.LEFT, padx=5, pady=5)
+                            
+                            delete_row_btn = tk.Button(detail_buttons, text='删除行', command=self.delete_detail_row, width=10, height=1, bg='#dc3545', fg='white', font=('SimHei', 9, 'bold'))
+                            delete_row_btn.pack(side=tk.LEFT, padx=5, pady=5)
+                    
                     # 显示字段区域
                     self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
                 # 加载记录数据
@@ -1060,6 +1287,31 @@ class MDAFormEngine:
                     self.delete_record(record_id)
             else:
                 messagebox.showinfo('提示', '该记录无法删除')
+    
+    def add_detail_row(self):
+        """在明细表格中添加新行"""
+        if hasattr(self, 'detail_tree') and self.detail_tree:
+            # 获取明细列配置
+            if self.current_module and self.current_form:
+                form_config = self.modules.get(self.current_module, {}).get(self.current_form, {})
+                detail_columns = form_config.get('detail_columns', [])
+                if detail_columns:
+                    # 创建空行数据
+                    values = [''] * len(detail_columns)
+                    # 插入新行
+                    self.detail_tree.insert('', tk.END, values=values)
+                    messagebox.showinfo('成功', '已添加新行')
+    
+    def delete_detail_row(self):
+        """删除明细表格中选中的行"""
+        if hasattr(self, 'detail_tree') and self.detail_tree:
+            selected_items = self.detail_tree.selection()
+            if selected_items:
+                for item in selected_items:
+                    self.detail_tree.delete(item)
+                messagebox.showinfo('成功', '已删除选中的行')
+            else:
+                messagebox.showinfo('提示', '请选择要删除的行')
     
     def export_data(self):
         """导出数据"""

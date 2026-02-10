@@ -539,7 +539,55 @@ class MetadataEditor:
                     if forms_elem:
                         for form_elem in forms_elem.findall('Form'):
                             form_name = form_elem.get('name')
-                            self.modules[module_name][form_name] = form_elem
+                            # 初始化表单配置
+                            self.modules[module_name][form_name] = {
+                                'fields': {},
+                                'detail_columns': []
+                            }
+                            
+                            # 加载字段列表
+                            field_list = form_elem.find('FieldList')
+                            if field_list is not None:
+                                for field_elem in field_list:
+                                    field_type = field_elem.tag
+                                    field_name = field_elem.get('name')
+                                    field_info = {
+                                        'type': field_type,
+                                        'left': int(field_elem.get('Left', 10)),
+                                        'top': int(field_elem.get('Top', 10)),
+                                        'width': int(field_elem.get('Width', 200)),
+                                        'height': int(field_elem.get('Height', 30)),
+                                        'visible_ext': field_elem.get('VisibleExt', '111')
+                                    }
+                                    
+                                    if field_type == 'TextField':
+                                        field_info['length'] = int(field_elem.get('Length', 200))
+                                    elif field_type == 'ComboBox':
+                                        if field_elem.find('Options'):
+                                            field_info['options'] = [opt.text for opt in field_elem.find('Options').findall('Option')]
+                                    elif field_type == 'MoneyField':
+                                        field_info['length'] = int(field_elem.get('Length', 10))
+                                    
+                                    validation = field_elem.find('Validation')
+                                    if validation is not None:
+                                        field_info['validation'] = {}
+                                        if validation.find('Required') is not None:
+                                            field_info['validation']['required'] = validation.find('Required').text == '1'
+                                        if validation.find('Number') is not None:
+                                            field_info['validation']['number'] = validation.find('Number').text == '1'
+                                    
+                                    self.modules[module_name][form_name]['fields'][field_name] = field_info
+                            
+                            # 加载明细表格配置
+                            detail_table = form_elem.find('DetailTable')
+                            if detail_table is not None:
+                                for column_elem in detail_table.findall('Column'):
+                                    column_info = {
+                                        'name': column_elem.get('name'),
+                                        'width': int(column_elem.get('width', 100)),
+                                        'type': column_elem.get('type', 'TextField')
+                                    }
+                                    self.modules[module_name][form_name]['detail_columns'].append(column_info)
             
             # 填充导航树
             self.populate_nav_tree()
@@ -932,6 +980,23 @@ class MetadataEditor:
                                         options_elem = ET.SubElement(field_elem, 'Options')
                                         ET.SubElement(options_elem, 'Option').text = '选项1'
                                         ET.SubElement(options_elem, 'Option').text = '选项2'
+                                
+                                # 保存明细表格配置
+                                detail_table = form_elem.find('DetailTable')
+                                if not detail_table:
+                                    detail_table = ET.SubElement(form_elem, 'DetailTable')
+                                else:
+                                    # 清空现有明细表格配置
+                                    for child in list(detail_table):
+                                        detail_table.remove(child)
+                                
+                                # 添加明细表格列配置
+                                detail_columns = ['序号', '物料编码', '物料名称', '规格型号', '单位', '数量', '单价', '金额']
+                                for col_name in detail_columns:
+                                    column_elem = ET.SubElement(detail_table, 'Column')
+                                    column_elem.set('name', col_name)
+                                    column_elem.set('width', '100')
+                                    column_elem.set('type', 'TextField')
                                 break
                     break
             
@@ -983,6 +1048,93 @@ class MetadataEditor:
                 del self.field_frames[field_name]
             if field_name in self.fields:
                 del self.fields[field_name]
+
+    def add_row(self):
+        """在明细表格中添加新行"""
+        if hasattr(self, 'detail_tree'):
+            # 获取当前选中的行
+            selected_items = self.detail_tree.selection()
+            if selected_items:
+                # 在选中行后插入新行
+                parent = self.detail_tree.parent(selected_items[0])
+                index = self.detail_tree.index(selected_items[0]) + 1
+                # 生成新行数据
+                new_row = ['', '', '', '', '', 0, 0, 0]
+                # 插入新行
+                self.detail_tree.insert(parent, index, values=new_row)
+            else:
+                # 在表格末尾添加新行
+                new_row = ['', '', '', '', '', 0, 0, 0]
+                self.detail_tree.insert('', tk.END, values=new_row)
+            # 更新序号
+            self.update_detail_row_numbers()
+            messagebox.showinfo('成功', '已添加新行')
+        else:
+            messagebox.showerror('错误', '明细表格未初始化')
+
+    def delete_row(self):
+        """删除明细表格中选中的行"""
+        if hasattr(self, 'detail_tree'):
+            selected_items = self.detail_tree.selection()
+            if selected_items:
+                for item in selected_items:
+                    self.detail_tree.delete(item)
+                # 更新序号
+                self.update_detail_row_numbers()
+                messagebox.showinfo('成功', '已删除选中行')
+            else:
+                messagebox.showwarning('警告', '请先选择要删除的行')
+        else:
+            messagebox.showerror('错误', '明细表格未初始化')
+
+    def insert_row(self):
+        """在当前行前插入新行"""
+        if hasattr(self, 'detail_tree'):
+            selected_items = self.detail_tree.selection()
+            if selected_items:
+                # 在选中行前插入新行
+                parent = self.detail_tree.parent(selected_items[0])
+                index = self.detail_tree.index(selected_items[0])
+                # 生成新行数据
+                new_row = ['', '', '', '', '', 0, 0, 0]
+                # 插入新行
+                self.detail_tree.insert(parent, index, values=new_row)
+                # 更新序号
+                self.update_detail_row_numbers()
+                messagebox.showinfo('成功', '已在当前行前插入新行')
+            else:
+                messagebox.showwarning('警告', '请先选择要在其前插入新行的行')
+        else:
+            messagebox.showerror('错误', '明细表格未初始化')
+
+    def copy_row(self):
+        """复制选中的行"""
+        if hasattr(self, 'detail_tree'):
+            selected_items = self.detail_tree.selection()
+            if selected_items:
+                for item in selected_items:
+                    # 获取选中行的数据
+                    values = self.detail_tree.item(item, 'values')
+                    # 在选中行后插入复制的行
+                    parent = self.detail_tree.parent(item)
+                    index = self.detail_tree.index(item) + 1
+                    # 插入复制的行
+                    self.detail_tree.insert(parent, index, values=values)
+                # 更新序号
+                self.update_detail_row_numbers()
+                messagebox.showinfo('成功', '已复制选中行')
+            else:
+                messagebox.showwarning('警告', '请先选择要复制的行')
+        else:
+            messagebox.showerror('错误', '明细表格未初始化')
+
+    def update_detail_row_numbers(self):
+        """更新明细表格的行号"""
+        if hasattr(self, 'detail_tree'):
+            for i, item in enumerate(self.detail_tree.get_children(), 1):
+                values = list(self.detail_tree.item(item, 'values'))
+                values[0] = i
+                self.detail_tree.item(item, values=values)
         
         messagebox.showinfo('成功', f'已删除 {len(fields_to_delete)} 个字段')
     
