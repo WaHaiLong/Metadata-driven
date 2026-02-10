@@ -124,59 +124,112 @@ class MDAFormEngine:
     def create_form(self):
         self.root = tk.Tk()
         self.root.title(self.form_name)
-        self.root.geometry('500x300')
+        self.root.geometry('800x600')
         self.root.resizable(True, True)
         
-        title_frame = tk.Frame(self.root, bg='#f0f0f0', relief=tk.RAISED, bd=2)
-        title_frame.pack(fill=tk.X, pady=10)
-        title_label = tk.Label(title_frame, text=self.form_name, font=('SimHei', 14, 'bold'), bg='#f0f0f0')
-        title_label.pack(pady=5, padx=10, anchor=tk.W)
+        # 设置ERP风格的颜色和字体
+        self.root.configure(bg='#f8f9fa')
         
-        self.form_frame = tk.Frame(self.root)
-        self.form_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # 顶部标题栏
+        title_frame = tk.Frame(self.root, bg='#1a56db', relief=tk.RAISED, bd=2)
+        title_frame.pack(fill=tk.X, pady=0, padx=0)
+        title_label = tk.Label(title_frame, text=self.form_name, font=('SimHei', 16, 'bold'), bg='#1a56db', fg='white')
+        title_label.pack(pady=10, padx=20, anchor=tk.W)
+        
+        # 工具栏
+        toolbar_frame = tk.Frame(self.root, bg='#e9ecef', relief=tk.RAISED, bd=1)
+        toolbar_frame.pack(fill=tk.X, pady=0, padx=0)
+        
+        toolbar_label = tk.Label(toolbar_frame, text='操作', font=('SimHei', 10, 'bold'), bg='#e9ecef')
+        toolbar_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        # 主内容区
+        main_frame = tk.Frame(self.root, bg='#f8f9fa')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 表单区域
+        form_container = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        form_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 表单标题
+        form_title_frame = tk.Frame(form_container, bg='#f8f9fa', relief=tk.FLAT, bd=1)
+        form_title_frame.pack(fill=tk.X, pady=10, padx=10)
+        form_title_label = tk.Label(form_title_frame, text='表单信息', font=('SimHei', 12, 'bold'), bg='#f8f9fa')
+        form_title_label.pack(pady=5, padx=10, anchor=tk.W)
+        
+        # 字段容器
+        self.form_frame = tk.Frame(form_container, bg='#ffffff')
+        self.form_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # 计算最大字段数量和布局
+        max_columns = 2
+        field_count = 0
         
         for field_name, field_info in self.fields.items():
             if not self.is_visible(field_info['visible_ext']):
                 continue
             
-            label = tk.Label(self.form_frame, text=field_name, anchor=tk.W)
-            label.place(x=field_info['left'], y=field_info['top'] - 20, width=field_info['width'], height=20)
+            # 计算行列位置
+            row = field_count // max_columns
+            col = field_count % max_columns
+            
+            # 字段标签
+            label_frame = tk.Frame(self.form_frame, bg='#ffffff')
+            label_frame.grid(row=row, column=col*2, padx=10, pady=10, sticky=tk.W)
+            label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15)
+            label.pack(pady=2, anchor=tk.W)
+            
+            # 字段输入控件
+            input_frame = tk.Frame(self.form_frame, bg='#ffffff')
+            input_frame.grid(row=row, column=col*2+1, padx=10, pady=10, sticky=tk.W)
             
             if field_info['type'] == 'TextField':
                 if field_info['height'] > 30:
-                    text_widget = tk.Text(self.form_frame, wrap=tk.WORD)
-                    text_widget.place(x=field_info['left'], y=field_info['top'], width=field_info['width'], height=field_info['height'])
+                    text_widget = tk.Text(input_frame, wrap=tk.WORD, width=30, height=4, font=('SimHei', 10))
+                    text_widget.pack(pady=2)
                     text_widget.bind('<KeyRelease>', lambda e, w=text_widget, l=field_info['length']: self.limit_text(w, l))
                     self.field_widgets[field_name] = text_widget
                 else:
-                    entry = tk.Entry(self.form_frame)
-                    entry.place(x=field_info['left'], y=field_info['top'], width=field_info['width'], height=field_info['height'])
+                    entry = tk.Entry(input_frame, width=30, font=('SimHei', 10))
+                    entry.pack(pady=2)
                     entry.bind('<KeyRelease>', lambda e, w=entry, l=field_info['length']: self.limit_text(w, l))
                     self.field_widgets[field_name] = entry
             elif field_info['type'] == 'ComboBox':
-                combobox = ttk.Combobox(self.form_frame, values=field_info['options'])
-                combobox.place(x=field_info['left'], y=field_info['top'], width=field_info['width'], height=field_info['height'])
+                combobox = ttk.Combobox(input_frame, values=field_info['options'], width=28, font=('SimHei', 10))
+                combobox.pack(pady=2)
                 self.field_widgets[field_name] = combobox
             elif field_info['type'] == 'MoneyField':
-                entry = tk.Entry(self.form_frame)
-                entry.place(x=field_info['left'], y=field_info['top'], width=field_info['width'], height=field_info['height'])
+                entry = tk.Entry(input_frame, width=30, font=('SimHei', 10))
+                entry.pack(pady=2)
                 self.field_widgets[field_name] = entry
+            
+            field_count += 1
         
-        button_frame = tk.Frame(self.root, bg='#f0f0f0', relief=tk.SUNKEN, bd=2)
-        button_frame.pack(fill=tk.X, pady=10)
+        # 底部按钮区域
+        button_frame = tk.Frame(main_frame, bg='#f8f9fa')
+        button_frame.pack(fill=tk.X, pady=10, padx=10)
         
-        save_btn = tk.Button(button_frame, text='保存', command=self.save_data, width=10)
-        save_btn.pack(side=tk.LEFT, padx=10, pady=5)
+        # 左侧按钮
+        left_buttons = tk.Frame(button_frame, bg='#f8f9fa')
+        left_buttons.pack(side=tk.LEFT, padx=10, pady=5)
         
-        load_btn = tk.Button(button_frame, text='加载', command=self.load_data, width=10)
-        load_btn.pack(side=tk.LEFT, padx=10, pady=5)
+        save_btn = tk.Button(left_buttons, text='保存', command=self.save_data, width=12, height=2, bg='#007bff', fg='white', font=('SimHei', 10, 'bold'))
+        save_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
-        reset_btn = tk.Button(button_frame, text='重置', command=self.reset_form, width=10)
-        reset_btn.pack(side=tk.LEFT, padx=10, pady=5)
+        load_btn = tk.Button(left_buttons, text='加载', command=self.load_data, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        load_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
-        submit_btn = tk.Button(button_frame, text='提交', command=self.validate_form, width=10)
-        submit_btn.pack(side=tk.LEFT, padx=10, pady=5)
+        reset_btn = tk.Button(left_buttons, text='重置', command=self.reset_form, width=12, height=2, bg='#dc3545', fg='white', font=('SimHei', 10, 'bold'))
+        reset_btn.pack(side=tk.LEFT, padx=5, pady=5)
         
+        # 右侧按钮
+        right_buttons = tk.Frame(button_frame, bg='#f8f9fa')
+        right_buttons.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        submit_btn = tk.Button(right_buttons, text='提交', command=self.validate_form, width=12, height=2, bg='#28a745', fg='white', font=('SimHei', 10, 'bold'))
+        submit_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+        
+        # 加载历史数据
         self.load_data()
     
     def limit_text(self, widget, max_length):
