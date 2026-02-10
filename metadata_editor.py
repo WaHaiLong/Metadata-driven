@@ -12,6 +12,7 @@ class MetadataEditor:
         self.current_module = None
         self.current_form = None
         self.dragged_control = None  # 存储当前拖拽的控件名称
+        self.drag_started = False  # 拖拽开始标记
         
         self.create_widgets()
         self.load_metadata()
@@ -566,13 +567,26 @@ class MetadataEditor:
             # 记录点击的控件信息
             tags = self.control_tree.item(item, 'tags')
             if len(tags) == 2:
-                self.dragged_control = tags[1]  # 存储当前拖拽的控件名称
-                print(f'准备拖拽控件: {self.dragged_control}')
+                category, control = tags
+                self.dragged_control = control  # 存储当前拖拽的控件名称
+                self.drag_started = True  # 添加拖拽开始标记
+                print(f'✅ 准备拖拽控件: {self.dragged_control}')
+                print(f'✅ 控件分类: {category}')
+                print(f'✅ 鼠标位置: ({event.x}, {event.y})')
+                print(f'✅ 拖拽开始标记: {self.drag_started}')
+            else:
+                print(f'❌ 控件标签格式不正确: {tags}')
+        else:
+            print(f'❌ 未选中任何控件，鼠标位置: ({event.x}, {event.y})')
     
     def on_control_drag(self, event):
         """控件拖拽事件"""
-        # 这里可以添加拖拽视觉反馈
-        pass
+        if hasattr(self, 'drag_started') and self.drag_started and self.dragged_control:
+            print(f'🔄 正在拖拽控件: {self.dragged_control}')
+            print(f'🔄 鼠标位置: ({event.x}, {event.y})')
+            # 这里可以添加拖拽视觉反馈，例如显示一个跟随鼠标的提示框
+        else:
+            print(f'🔄 拖拽未开始或没有要拖拽的控件')
     
     def setup_drag_and_drop(self):
         """设置拖拽和释放事件"""
@@ -582,21 +596,50 @@ class MetadataEditor:
         self.control_tree.bind('<B1-Motion>', self.on_control_drag)
         # 在设计区域添加鼠标释放事件
         self.scrollable_frame.bind('<ButtonRelease-1>', self.on_design_area_drop)
+        # 在画布上添加鼠标释放事件，确保事件能够被正确捕获
+        if hasattr(self, 'canvas'):
+            self.canvas.bind('<ButtonRelease-1>', self.on_canvas_drop)
+        print('✅ 已设置拖拽和释放事件')
+    
+    def on_canvas_drop(self, event):
+        """在画布上释放控件"""
+        print(f'🖱️ 在画布上释放鼠标，位置: ({event.x}, {event.y})')
+        # 将画布坐标转换为scrollable_frame的坐标
+        canvas_x = event.x
+        canvas_y = event.y
+        # 调用设计区域释放方法
+        self.on_design_area_drop(event)
     
     def on_design_area_drop(self, event):
         """在设计区域释放控件"""
-        if hasattr(self, 'dragged_control') and self.dragged_control:
+        print(f'🖱️ 在设计区域释放鼠标，位置: ({event.x}, {event.y})')
+        
+        # 检查拖拽状态
+        if hasattr(self, 'drag_started') and self.drag_started and hasattr(self, 'dragged_control') and self.dragged_control:
+            print(f'✅ 释放控件: {self.dragged_control}')
             # 获取当前选择的模块和单据
             if self.current_module and self.current_form:
+                print(f'✅ 当前模块: {self.current_module}')
+                print(f'✅ 当前单据: {self.current_form}')
                 # 创建新字段
-                print(f'在设计区域释放控件: {self.dragged_control}')
                 self.add_field_from_control(self.dragged_control)
+                print(f'✅ 成功添加字段: {self.dragged_control}')
                 # 重置拖拽状态
                 self.dragged_control = None
+                self.drag_started = False
+                print(f'✅ 重置拖拽状态: 完成')
             else:
-                print('请先选择一个模块和单据')
+                print('❌ 请先选择一个模块和单据')
+                # 重置拖拽状态
+                self.dragged_control = None
+                self.drag_started = False
         else:
-            print('没有拖拽的控件')
+            print('❌ 没有拖拽的控件或拖拽未开始')
+            # 重置拖拽状态
+            if hasattr(self, 'drag_started'):
+                self.drag_started = False
+            if hasattr(self, 'dragged_control'):
+                self.dragged_control = None
     
     def add_field_from_control(self, control_name):
         """根据拖拽的控件名称添加对应的字段"""
