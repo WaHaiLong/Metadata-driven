@@ -617,6 +617,43 @@ class MetadataEditor:
             # 例如：创建一个临时窗口显示正在拖拽的控件名称
         else:
             print(f'🔄 拖拽未开始或没有要拖拽的控件')
+
+    def on_global_drag(self, event):
+        """全局拖拽事件"""
+        if hasattr(self, 'drag_started') and self.drag_started and self.dragged_control:
+            print(f'🌍 全局拖拽控件: {self.dragged_control}')
+            print(f'🌍 全局鼠标位置: ({event.x}, {event.y})')
+
+    def on_global_drop(self, event):
+        """全局释放事件"""
+        print(f'🌍 全局释放鼠标，位置: ({event.x}, {event.y})')
+        
+        # 检查拖拽状态
+        if hasattr(self, 'drag_started') and self.drag_started and hasattr(self, 'dragged_control') and self.dragged_control:
+            print(f'✅ 全局释放控件: {self.dragged_control}')
+            # 获取当前选择的模块和单据
+            if self.current_module and self.current_form:
+                print(f'✅ 当前模块: {self.current_module}')
+                print(f'✅ 当前单据: {self.current_form}')
+                # 创建新字段
+                self.add_field_from_control(self.dragged_control)
+                print(f'✅ 成功添加字段: {self.dragged_control}')
+                # 重置拖拽状态
+                self.dragged_control = None
+                self.drag_started = False
+                print(f'✅ 重置拖拽状态: 完成')
+            else:
+                print('❌ 请先选择一个模块和单据')
+                # 重置拖拽状态
+                self.dragged_control = None
+                self.drag_started = False
+        else:
+            print('❌ 没有拖拽的控件或拖拽未开始')
+            # 重置拖拽状态
+            if hasattr(self, 'drag_started'):
+                self.drag_started = False
+            if hasattr(self, 'dragged_control'):
+                self.dragged_control = None
     
     def on_field_drag_start(self, event, field_name):
         """字段拖拽开始事件"""
@@ -643,9 +680,11 @@ class MetadataEditor:
         """设置拖拽和释放事件"""
         # 在控件树上添加鼠标按下事件
         self.control_tree.bind('<Button-1>', self.on_control_click)
-        # 在控件树上添加鼠标移动事件
-        self.control_tree.bind('<B1-Motion>', self.on_control_drag)
-        # 在设计区域添加鼠标释放事件
+        # 在根窗口上添加鼠标移动事件，确保鼠标离开控件树时也能触发
+        self.root.bind('<B1-Motion>', self.on_global_drag)
+        # 在根窗口上添加鼠标释放事件，确保鼠标在任何地方释放都能触发
+        self.root.bind('<ButtonRelease-1>', self.on_global_drop)
+        # 在设计区域添加鼠标释放事件，作为备份
         self.scrollable_frame.bind('<ButtonRelease-1>', self.on_design_area_drop)
         # 在画布上添加鼠标释放事件，确保事件能够被正确捕获
         if hasattr(self, 'canvas'):

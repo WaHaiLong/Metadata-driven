@@ -15,7 +15,7 @@
                         <MoneyField name="入库金额" Left="10" Top="130" Width="200" Height="30" VisibleExt="111" Length="10" />
                     </FieldList>
                 </Form>
-            </Forms>
+            <Form name="新单据"><FieldList><TextField name="id" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /><ComboBox name="状态" Left="10" Top="10" Width="200" Height="30" VisibleExt="111"><Options><Option>选项1</Option><Option>选项2</Option></Options></ComboBox><TextField name="created_at" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /><TextField name="created_by" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /><TextField name="密码框5" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /><TextField name="密码框6" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /><TextField name="按钮7" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /><TextField name="单选按钮8" Left="10" Top="10" Width="200" Height="30" VisibleExt="111" Length="200" /></FieldList></Form></Forms>
         </Module>
         <Module name="销售管理">
             <Forms>
