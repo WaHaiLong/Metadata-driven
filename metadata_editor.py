@@ -13,6 +13,9 @@ class MetadataEditor:
         self.current_form = None
         self.dragged_control = None  # 存储当前拖拽的控件名称
         self.drag_started = False  # 拖拽开始标记
+        self.dragging_field = None  # 正在拖拽的字段名称
+        self.drag_start_x = 0  # 拖拽开始的x坐标
+        self.drag_start_y = 0  # 拖拽开始的y坐标
         
         self.create_widgets()
         self.load_metadata()
@@ -158,6 +161,31 @@ class MetadataEditor:
         
         delete_field_btn = tk.Button(field_tools, text='删除字段', width=10, height=1, bg='#dc3545', fg='white', font=('SimHei', 9, 'bold'), command=self.delete_field)
         delete_field_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        # 设计工具
+        design_tools = tk.Frame(toolbar_frame, bg='#e0e0e0')
+        design_tools.pack(side=tk.LEFT, padx=20, pady=5)
+        
+        design_label = tk.Label(design_tools, text='设计工具', font=('SimHei', 10, 'bold'), bg='#e0e0e0', fg='#333333')
+        design_label.pack(side=tk.LEFT, padx=10, pady=2)
+        
+        layout_btn = tk.Button(design_tools, text='布局工具', width=10, height=1, bg='#6f42c1', fg='white', font=('SimHei', 9, 'bold'), command=self.open_layout_tool)
+        layout_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        style_btn = tk.Button(design_tools, text='样式编辑', width=10, height=1, bg='#fd7e14', fg='white', font=('SimHei', 9, 'bold'), command=self.open_style_editor)
+        style_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        validate_btn = tk.Button(design_tools, text='验证规则', width=10, height=1, bg='#dc3545', fg='white', font=('SimHei', 9, 'bold'), command=self.open_validation_editor)
+        validate_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        condition_btn = tk.Button(design_tools, text='显示条件', width=10, height=1, bg='#ffc107', fg='white', font=('SimHei', 9, 'bold'), command=self.open_display_condition_editor)
+        condition_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        default_btn = tk.Button(design_tools, text='默认值', width=10, height=1, bg='#6f42c1', fg='white', font=('SimHei', 9, 'bold'), command=self.open_default_value_editor)
+        default_btn.pack(side=tk.LEFT, padx=2, pady=2)
+        
+        preview_btn = tk.Button(design_tools, text='预览', width=8, height=1, bg='#20c997', fg='white', font=('SimHei', 9, 'bold'), command=self.preview_form)
+        preview_btn.pack(side=tk.LEFT, padx=2, pady=2)
         
         # 右侧状态显示
         status_tools = tk.Frame(toolbar_frame, bg='#e0e0e0')
@@ -584,9 +612,32 @@ class MetadataEditor:
         if hasattr(self, 'drag_started') and self.drag_started and self.dragged_control:
             print(f'🔄 正在拖拽控件: {self.dragged_control}')
             print(f'🔄 鼠标位置: ({event.x}, {event.y})')
-            # 这里可以添加拖拽视觉反馈，例如显示一个跟随鼠标的提示框
+            # 添加拖拽视觉反馈
+            # 这里可以实现一个跟随鼠标的提示框
+            # 例如：创建一个临时窗口显示正在拖拽的控件名称
         else:
             print(f'🔄 拖拽未开始或没有要拖拽的控件')
+    
+    def on_field_drag_start(self, event, field_name):
+        """字段拖拽开始事件"""
+        print(f'📦 开始拖拽字段: {field_name}')
+        self.dragging_field = field_name
+        self.drag_start_x = event.x
+        self.drag_start_y = event.y
+    
+    def on_field_drag_motion(self, event, field_name):
+        """字段拖拽移动事件"""
+        if hasattr(self, 'dragging_field') and self.dragging_field == field_name:
+            print(f'📦 正在移动字段: {field_name}')
+            print(f'📦 鼠标位置: ({event.x}, {event.y})')
+            # 这里可以实现字段的实时移动
+    
+    def on_field_drag_end(self, event, field_name):
+        """字段拖拽结束事件"""
+        if hasattr(self, 'dragging_field') and self.dragging_field == field_name:
+            print(f'📦 结束拖拽字段: {field_name}')
+            # 这里可以实现字段的最终位置调整
+            self.dragging_field = None
     
     def setup_drag_and_drop(self):
         """设置拖拽和释放事件"""
@@ -1188,6 +1239,55 @@ class MetadataEditor:
         number_var = tk.BooleanVar(value=False)
         tk.Checkbutton(validation_form, text='数字格式', variable=number_var, font=('SimHei', 10), bg='#ffffff').grid(row=0, column=1, padx=10, pady=10, sticky=tk.W)
         
+        # 正则表达式验证
+        regex_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(validation_form, text='正则验证', variable=regex_var, font=('SimHei', 10), bg='#ffffff').grid(row=1, column=0, padx=10, pady=10, sticky=tk.W)
+        regex_entry = tk.Entry(validation_form, width=30, font=('SimHei', 10))
+        regex_entry.grid(row=1, column=1, padx=10, pady=10, sticky=tk.W)
+        
+        # 长度验证
+        length_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(validation_form, text='长度验证', variable=length_var, font=('SimHei', 10), bg='#ffffff').grid(row=2, column=0, padx=10, pady=10, sticky=tk.W)
+        length_entry = tk.Entry(validation_form, width=20, font=('SimHei', 10))
+        length_entry.grid(row=2, column=1, padx=10, pady=10, sticky=tk.W)
+        tk.Label(validation_form, text='(最小-最大)', font=('SimHei', 9), bg='#ffffff').grid(row=2, column=2, padx=10, pady=10, sticky=tk.W)
+        
+        # 高级属性
+        advanced_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        advanced_frame.pack(fill=tk.X, pady=10, padx=10)
+        
+        advanced_title = tk.Label(advanced_frame, text='高级属性', font=('SimHei', 12, 'bold'), bg='#ffffff')
+        advanced_title.pack(pady=10, padx=20, anchor=tk.W)
+        
+        advanced_form = tk.Frame(advanced_frame, bg='#ffffff')
+        advanced_form.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # 字段描述
+        tk.Label(advanced_form, text='字段描述:', font=('SimHei', 10), bg='#ffffff', width=12).grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
+        desc_var = tk.StringVar(value='')
+        desc_entry = tk.Entry(advanced_form, textvariable=desc_var, width=40, font=('SimHei', 10))
+        desc_entry.grid(row=0, column=1, padx=10, pady=10, sticky=tk.W)
+        
+        # 帮助文本
+        tk.Label(advanced_form, text='帮助文本:', font=('SimHei', 10), bg='#ffffff', width=12).grid(row=1, column=0, padx=10, pady=10, sticky=tk.W)
+        help_var = tk.StringVar(value='')
+        help_entry = tk.Entry(advanced_form, textvariable=help_var, width=40, font=('SimHei', 10))
+        help_entry.grid(row=1, column=1, padx=10, pady=10, sticky=tk.W)
+        
+        # 占位符
+        tk.Label(advanced_form, text='占位符:', font=('SimHei', 10), bg='#ffffff', width=12).grid(row=2, column=0, padx=10, pady=10, sticky=tk.W)
+        placeholder_var = tk.StringVar(value='')
+        placeholder_entry = tk.Entry(advanced_form, textvariable=placeholder_var, width=40, font=('SimHei', 10))
+        placeholder_entry.grid(row=2, column=1, padx=10, pady=10, sticky=tk.W)
+        
+        # 只读属性
+        readonly_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(advanced_form, text='只读', variable=readonly_var, font=('SimHei', 10), bg='#ffffff').grid(row=3, column=0, padx=10, pady=10, sticky=tk.W)
+        
+        # 禁用属性
+        disabled_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(advanced_form, text='禁用', variable=disabled_var, font=('SimHei', 10), bg='#ffffff').grid(row=3, column=1, padx=10, pady=10, sticky=tk.W)
+        
         # 底部按钮
         button_frame = tk.Frame(main_frame, bg='#f8f9fa')
         button_frame.pack(fill=tk.X, pady=10, padx=10)
@@ -1727,7 +1827,260 @@ class MetadataEditor:
     
     def help(self):
         """使用帮助"""
-        messagebox.showinfo('使用帮助', '使用帮助功能开发中')
+        messagebox.showinfo('使用帮助', '元数据编辑器使用说明:\n\n1. 添加模块: 点击工具栏中的"添加模块"按钮\n2. 添加单据: 选择模块后点击"添加单据"按钮\n3. 添加字段: 选择单据后点击"添加字段"按钮\n4. 编辑字段: 点击字段对应的"编辑"按钮\n5. 保存配置: 点击工具栏中的"保存配置"按钮\n6. 布局工具: 点击工具栏中的"布局工具"按钮\n7. 样式编辑: 点击工具栏中的"样式编辑"按钮\n8. 预览表单: 点击工具栏中的"预览"按钮\n9. 快捷键: Ctrl+S 保存 | F1 帮助')
+    
+    def open_layout_tool(self):
+        """打开布局工具"""
+        # 创建布局工具窗口
+        layout_window = tk.Toplevel(self.root)
+        layout_window.title('布局工具')
+        layout_window.geometry('600x400')
+        layout_window.resizable(True, True)
+        layout_window.configure(bg='#ffffff')
+        
+        # 布局工具内容
+        layout_frame = tk.Frame(layout_window, bg='#ffffff')
+        layout_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 布局选项
+        layout_options_frame = tk.Frame(layout_frame, bg='#ffffff')
+        layout_options_frame.pack(fill=tk.X, pady=10)
+        
+        layout_label = tk.Label(layout_options_frame, text='布局选项', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        layout_label.pack(pady=10, anchor=tk.W)
+        
+        # 网格布局选项
+        grid_frame = tk.Frame(layout_options_frame, bg='#ffffff')
+        grid_frame.pack(fill=tk.X, pady=5)
+        
+        grid_var = tk.BooleanVar(value=True)
+        grid_checkbox = tk.Checkbutton(grid_frame, text='启用网格布局', variable=grid_var, font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        grid_checkbox.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        # 网格大小
+        grid_size_frame = tk.Frame(layout_options_frame, bg='#ffffff')
+        grid_size_frame.pack(fill=tk.X, pady=5)
+        
+        grid_size_label = tk.Label(grid_size_frame, text='网格大小:', font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        grid_size_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        grid_size_var = tk.StringVar(value='10')
+        grid_size_entry = tk.Entry(grid_size_frame, textvariable=grid_size_var, width=5, font=('SimHei', 10))
+        grid_size_entry.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 布局对齐选项
+        align_frame = tk.Frame(layout_options_frame, bg='#ffffff')
+        align_frame.pack(fill=tk.X, pady=10)
+        
+        align_label = tk.Label(align_frame, text='对齐选项', font=('SimHei', 10, 'bold'), bg='#ffffff', fg='#333333')
+        align_label.pack(anchor=tk.W, padx=10, pady=5)
+        
+        # 对齐按钮
+        align_buttons_frame = tk.Frame(align_frame, bg='#ffffff')
+        align_buttons_frame.pack(fill=tk.X, pady=5)
+        
+        left_align_btn = tk.Button(align_buttons_frame, text='左对齐', width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), command=lambda: self.align_fields('left'))
+        left_align_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        
+        center_align_btn = tk.Button(align_buttons_frame, text='居中对齐', width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), command=lambda: self.align_fields('center'))
+        center_align_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        
+        right_align_btn = tk.Button(align_buttons_frame, text='右对齐', width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), command=lambda: self.align_fields('right'))
+        right_align_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        
+        top_align_btn = tk.Button(align_buttons_frame, text='顶对齐', width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), command=lambda: self.align_fields('top'))
+        top_align_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        
+        middle_align_btn = tk.Button(align_buttons_frame, text='垂直居中', width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), command=lambda: self.align_fields('middle'))
+        middle_align_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        
+        bottom_align_btn = tk.Button(align_buttons_frame, text='底对齐', width=8, height=1, bg='#f0f0f0', fg='#333333', font=('SimHei', 9), command=lambda: self.align_fields('bottom'))
+        bottom_align_btn.pack(side=tk.LEFT, padx=5, pady=2)
+        
+        # 应用按钮
+        apply_frame = tk.Frame(layout_frame, bg='#ffffff')
+        apply_frame.pack(fill=tk.X, pady=20)
+        
+        apply_btn = tk.Button(apply_frame, text='应用', width=10, height=1, bg='#17a2b8', fg='white', font=('SimHei', 10, 'bold'), command=layout_window.destroy)
+        apply_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+    
+    def align_fields(self, align_type):
+        """对齐字段"""
+        # 这里可以实现字段对齐的逻辑
+        print(f'对齐字段: {align_type}')
+        messagebox.showinfo('对齐', f'字段已{align_type}对齐')
+    
+    def open_style_editor(self):
+        """打开样式编辑器"""
+        # 创建样式编辑器窗口
+        style_window = tk.Toplevel(self.root)
+        style_window.title('样式编辑器')
+        style_window.geometry('700x500')
+        style_window.resizable(True, True)
+        style_window.configure(bg='#ffffff')
+        
+        # 样式编辑器内容
+        style_frame = tk.Frame(style_window, bg='#ffffff')
+        style_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 字体设置
+        font_frame = tk.Frame(style_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        font_frame.pack(fill=tk.X, pady=10)
+        
+        font_label = tk.Label(font_frame, text='字体设置', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        font_label.pack(pady=10, padx=15, anchor=tk.W)
+        
+        # 字体选项
+        font_options_frame = tk.Frame(font_frame, bg='#ffffff')
+        font_options_frame.pack(fill=tk.X, pady=5, padx=15)
+        
+        # 字体名称
+        font_name_frame = tk.Frame(font_options_frame, bg='#ffffff')
+        font_name_frame.pack(fill=tk.X, pady=5)
+        
+        font_name_label = tk.Label(font_name_frame, text='字体:', font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        font_name_label.pack(side=tk.LEFT, padx=10, pady=5, width=8)
+        
+        font_names = ['SimHei', 'Microsoft YaHei', 'Arial', 'Times New Roman', 'Courier New']
+        font_name_var = tk.StringVar(value='SimHei')
+        font_name_combobox = ttk.Combobox(font_name_frame, textvariable=font_name_var, values=font_names, width=20, font=('SimHei', 10))
+        font_name_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 字体大小
+        font_size_frame = tk.Frame(font_options_frame, bg='#ffffff')
+        font_size_frame.pack(fill=tk.X, pady=5)
+        
+        font_size_label = tk.Label(font_size_frame, text='大小:', font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        font_size_label.pack(side=tk.LEFT, padx=10, pady=5, width=8)
+        
+        font_size_var = tk.StringVar(value='10')
+        font_size_combobox = ttk.Combobox(font_size_frame, textvariable=font_size_var, values=['8', '9', '10', '11', '12', '14', '16', '18', '20'], width=10, font=('SimHei', 10))
+        font_size_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 字体样式
+        font_style_frame = tk.Frame(font_options_frame, bg='#ffffff')
+        font_style_frame.pack(fill=tk.X, pady=5)
+        
+        font_style_label = tk.Label(font_style_frame, text='样式:', font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        font_style_label.pack(side=tk.LEFT, padx=10, pady=5, width=8)
+        
+        bold_var = tk.BooleanVar()
+        bold_checkbox = tk.Checkbutton(font_style_frame, text='粗体', variable=bold_var, font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        bold_checkbox.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        italic_var = tk.BooleanVar()
+        italic_checkbox = tk.Checkbutton(font_style_frame, text='斜体', variable=italic_var, font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        italic_checkbox.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        # 颜色设置
+        color_frame = tk.Frame(style_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        color_frame.pack(fill=tk.X, pady=10)
+        
+        color_label = tk.Label(color_frame, text='颜色设置', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        color_label.pack(pady=10, padx=15, anchor=tk.W)
+        
+        # 前景色
+        fg_color_frame = tk.Frame(color_frame, bg='#ffffff')
+        fg_color_frame.pack(fill=tk.X, pady=5, padx=15)
+        
+        fg_color_label = tk.Label(fg_color_frame, text='前景色:', font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        fg_color_label.pack(side=tk.LEFT, padx=10, pady=5, width=8)
+        
+        fg_color_var = tk.StringVar(value='#333333')
+        fg_color_entry = tk.Entry(fg_color_frame, textvariable=fg_color_var, width=15, font=('SimHei', 10))
+        fg_color_entry.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 背景色
+        bg_color_frame = tk.Frame(color_frame, bg='#ffffff')
+        bg_color_frame.pack(fill=tk.X, pady=5, padx=15)
+        
+        bg_color_label = tk.Label(bg_color_frame, text='背景色:', font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        bg_color_label.pack(side=tk.LEFT, padx=10, pady=5, width=8)
+        
+        bg_color_var = tk.StringVar(value='#ffffff')
+        bg_color_entry = tk.Entry(bg_color_frame, textvariable=bg_color_var, width=15, font=('SimHei', 10))
+        bg_color_entry.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 边框设置
+        border_frame = tk.Frame(style_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        border_frame.pack(fill=tk.X, pady=10)
+        
+        border_label = tk.Label(border_frame, text='边框设置', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        border_label.pack(pady=10, padx=15, anchor=tk.W)
+        
+        # 边框宽度
+        border_width_frame = tk.Frame(border_frame, bg='#ffffff')
+        border_width_frame.pack(fill=tk.X, pady=5, padx=15)
+        
+        border_width_label = tk.Label(border_width_frame, text='边框宽度:', font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        border_width_label.pack(side=tk.LEFT, padx=10, pady=5, width=10)
+        
+        border_width_var = tk.StringVar(value='1')
+        border_width_entry = tk.Entry(border_width_frame, textvariable=border_width_var, width=10, font=('SimHei', 10))
+        border_width_entry.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 应用按钮
+        apply_frame = tk.Frame(style_frame, bg='#ffffff')
+        apply_frame.pack(fill=tk.X, pady=20)
+        
+        apply_btn = tk.Button(apply_frame, text='应用', width=10, height=1, bg='#17a2b8', fg='white', font=('SimHei', 10, 'bold'), command=style_window.destroy)
+        apply_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+    
+    def preview_form(self):
+        """预览表单"""
+        # 创建预览窗口
+        preview_window = tk.Toplevel(self.root)
+        preview_window.title('表单预览')
+        preview_window.geometry('800x600')
+        preview_window.resizable(True, True)
+        preview_window.configure(bg='#f0f0f0')
+        
+        # 预览内容
+        preview_frame = tk.Frame(preview_window, bg='#ffffff', relief=tk.RAISED, bd=1)
+        preview_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 表单标题
+        if self.current_module and self.current_form:
+            preview_title = tk.Label(preview_frame, text=f'{self.current_module} - {self.current_form}', font=('SimHei', 14, 'bold'), bg='#ffffff', fg='#333333')
+            preview_title.pack(pady=20, padx=20, anchor=tk.W)
+        else:
+            preview_title = tk.Label(preview_frame, text='表单预览', font=('SimHei', 14, 'bold'), bg='#ffffff', fg='#333333')
+            preview_title.pack(pady=20, padx=20, anchor=tk.W)
+        
+        # 模拟表单字段
+        fields_container = tk.Frame(preview_frame, bg='#ffffff')
+        fields_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        # 如果有字段，显示字段预览
+        if self.fields:
+            for field_name, field_info in self.fields.items():
+                field_frame = tk.Frame(fields_container, bg='#ffffff')
+                field_frame.pack(fill=tk.X, pady=8, padx=10)
+                
+                label = tk.Label(field_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', fg='#333333', width=15, anchor=tk.W)
+                label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                field_type = field_info['type'].get()
+                if field_type == 'ComboBox':
+                    combobox = ttk.Combobox(field_frame, width=40, font=('SimHei', 10))
+                    combobox.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.X, expand=True)
+                else:
+                    entry = tk.Entry(field_frame, width=40, font=('SimHei', 10))
+                    entry.pack(side=tk.LEFT, padx=10, pady=5, fill=tk.X, expand=True)
+        else:
+            # 显示空表单提示
+            empty_label = tk.Label(fields_container, text='暂无字段，请先添加字段', font=('SimHei', 10), bg='#ffffff', fg='#999999')
+            empty_label.pack(pady=50, padx=20)
+        
+        # 按钮区域
+        buttons_frame = tk.Frame(preview_frame, bg='#ffffff')
+        buttons_frame.pack(fill=tk.X, pady=20, padx=20)
+        
+        cancel_btn = tk.Button(buttons_frame, text='取消', width=10, height=1, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'), command=preview_window.destroy)
+        cancel_btn.pack(side=tk.RIGHT, padx=5, pady=5)
+        
+        save_btn = tk.Button(buttons_frame, text='保存', width=10, height=1, bg='#17a2b8', fg='white', font=('SimHei', 10, 'bold'), command=preview_window.destroy)
+        save_btn.pack(side=tk.RIGHT, padx=5, pady=5)
     
     def about(self):
         """关于"""
@@ -1812,6 +2165,692 @@ class MetadataEditor:
         # 添加属性
         for name, value in properties:
             self.property_list.insert('', tk.END, values=(name, value))
+
+    def open_validation_editor(self):
+        """打开验证规则编辑器"""
+        # 创建验证规则编辑器窗口
+        validation_window = tk.Toplevel(self.root)
+        validation_window.title('验证规则编辑器')
+        validation_window.geometry('800x600')
+        validation_window.resizable(True, True)
+        validation_window.configure(bg='#ffffff')
+        
+        # 验证规则编辑器内容
+        main_frame = tk.Frame(validation_window, bg='#ffffff')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 左侧：规则列表
+        left_frame = tk.Frame(main_frame, bg='#ffffff')
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, pady=10, padx=10)
+        
+        # 规则列表标题
+        rule_list_title = tk.Label(left_frame, text='验证规则列表', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        rule_list_title.pack(pady=10, padx=10, anchor=tk.W)
+        
+        # 规则列表
+        rule_list_frame = tk.Frame(left_frame, bg='#ffffff', relief=tk.SUNKEN, bd=1)
+        rule_list_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
+        
+        # 规则列表树
+        columns = ('name', 'type', 'field', 'status')
+        rule_tree = ttk.Treeview(rule_list_frame, columns=columns, show='headings', height=15)
+        rule_tree.heading('name', text='规则名称')
+        rule_tree.heading('type', text='验证类型')
+        rule_tree.heading('field', text='适用字段')
+        rule_tree.heading('status', text='状态')
+        
+        rule_tree.column('name', width=120)
+        rule_tree.column('type', width=100)
+        rule_tree.column('field', width=120)
+        rule_tree.column('status', width=60)
+        
+        rule_tree.pack(fill=tk.BOTH, expand=True)
+        
+        # 规则操作按钮
+        rule_buttons_frame = tk.Frame(left_frame, bg='#ffffff')
+        rule_buttons_frame.pack(fill=tk.X, pady=10, padx=10)
+        
+        add_rule_btn = tk.Button(rule_buttons_frame, text='添加规则', width=10, height=1, bg='#28a745', fg='white', font=('SimHei', 9, 'bold'))
+        add_rule_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        edit_rule_btn = tk.Button(rule_buttons_frame, text='编辑规则', width=10, height=1, bg='#007bff', fg='white', font=('SimHei', 9, 'bold'))
+        edit_rule_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        delete_rule_btn = tk.Button(rule_buttons_frame, text='删除规则', width=10, height=1, bg='#dc3545', fg='white', font=('SimHei', 9, 'bold'))
+        delete_rule_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 右侧：规则配置
+        right_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=10, padx=10)
+        
+        # 规则配置标题
+        config_title = tk.Label(right_frame, text='规则配置', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        config_title.pack(pady=10, padx=20, anchor=tk.W)
+        
+        # 规则基本信息
+        basic_info_frame = tk.Frame(right_frame, bg='#ffffff', relief=tk.FLAT, bd=1)
+        basic_info_frame.pack(fill=tk.X, pady=10, padx=20)
+        
+        # 规则名称
+        rule_name_frame = tk.Frame(basic_info_frame, bg='#ffffff')
+        rule_name_frame.pack(fill=tk.X, pady=5)
+        
+        rule_name_label = tk.Label(rule_name_frame, text='规则名称:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        rule_name_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        rule_name_var = tk.StringVar(value='新规则')
+        rule_name_entry = tk.Entry(rule_name_frame, textvariable=rule_name_var, width=40, font=('SimHei', 10))
+        rule_name_entry.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 验证类型
+        validation_type_frame = tk.Frame(basic_info_frame, bg='#ffffff')
+        validation_type_frame.pack(fill=tk.X, pady=5)
+        
+        validation_type_label = tk.Label(validation_type_frame, text='验证类型:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        validation_type_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        validation_types = ['非空验证', '数字验证', '日期验证', '邮箱验证', '电话验证', '长度验证', '范围验证', '正则验证', '自定义验证']
+        validation_type_var = tk.StringVar(value=validation_types[0])
+        validation_type_combobox = ttk.Combobox(validation_type_frame, textvariable=validation_type_var, values=validation_types, width=20, font=('SimHei', 10))
+        validation_type_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 适用字段
+        field_frame = tk.Frame(basic_info_frame, bg='#ffffff')
+        field_frame.pack(fill=tk.X, pady=5)
+        
+        field_label = tk.Label(field_frame, text='适用字段:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        field_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        # 模拟字段列表
+        fields = ['订单编号', '供应商', '采购日期', '采购部门', '总金额']
+        field_var = tk.StringVar(value=fields[0] if fields else '')
+        field_combobox = ttk.Combobox(field_frame, textvariable=field_var, values=fields, width=20, font=('SimHei', 10))
+        field_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 验证配置
+        validation_config_frame = tk.Frame(right_frame, bg='#ffffff', relief=tk.FLAT, bd=1)
+        validation_config_frame.pack(fill=tk.X, pady=10, padx=20)
+        
+        # 验证配置标题
+        config_label = tk.Label(validation_config_frame, text='验证配置', font=('SimHei', 11, 'bold'), bg='#ffffff', fg='#333333')
+        config_label.pack(pady=10, anchor=tk.W)
+        
+        # 错误提示信息
+        error_message_frame = tk.Frame(validation_config_frame, bg='#ffffff')
+        error_message_frame.pack(fill=tk.X, pady=5)
+        
+        error_message_label = tk.Label(error_message_frame, text='错误提示:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        error_message_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        error_message_var = tk.StringVar(value='请输入有效的值')
+        error_message_entry = tk.Entry(error_message_frame, textvariable=error_message_var, width=40, font=('SimHei', 10))
+        error_message_entry.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 验证规则详情
+        rule_detail_frame = tk.Frame(validation_config_frame, bg='#ffffff')
+        rule_detail_frame.pack(fill=tk.X, pady=10)
+        
+        # 根据验证类型显示不同的配置选项
+        def show_validation_config():
+            """显示验证配置"""
+            # 清空现有配置
+            for widget in rule_detail_frame.winfo_children():
+                widget.destroy()
+            
+            validation_type = validation_type_var.get()
+            
+            if validation_type == '非空验证':
+                # 非空验证配置
+                required_frame = tk.Frame(rule_detail_frame, bg='#ffffff')
+                required_frame.pack(fill=tk.X, pady=5)
+                
+                required_label = tk.Label(required_frame, text='非空验证:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                required_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                required_var = tk.BooleanVar(value=True)
+                required_checkbox = tk.Checkbutton(required_frame, variable=required_var, font=('SimHei', 10), bg='#ffffff', fg='#333333')
+                required_checkbox.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            elif validation_type == '数字验证':
+                # 数字验证配置
+                number_frame = tk.Frame(rule_detail_frame, bg='#ffffff')
+                number_frame.pack(fill=tk.X, pady=5)
+                
+                number_label = tk.Label(number_frame, text='数字格式:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                number_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                number_types = ['整数', '小数', '正数', '负数']
+                number_type_var = tk.StringVar(value=number_types[0])
+                number_type_combobox = ttk.Combobox(number_frame, textvariable=number_type_var, values=number_types, width=15, font=('SimHei', 10))
+                number_type_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            elif validation_type == '长度验证':
+                # 长度验证配置
+                length_frame = tk.Frame(rule_detail_frame, bg='#ffffff')
+                length_frame.pack(fill=tk.X, pady=5)
+                
+                min_length_label = tk.Label(length_frame, text='最小长度:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                min_length_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                min_length_var = tk.StringVar(value='0')
+                min_length_entry = tk.Entry(length_frame, textvariable=min_length_var, width=10, font=('SimHei', 10))
+                min_length_entry.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                max_length_label = tk.Label(length_frame, text='最大长度:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=10)
+                max_length_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                max_length_var = tk.StringVar(value='100')
+                max_length_entry = tk.Entry(length_frame, textvariable=max_length_var, width=10, font=('SimHei', 10))
+                max_length_entry.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            elif validation_type == '范围验证':
+                # 范围验证配置
+                range_frame = tk.Frame(rule_detail_frame, bg='#ffffff')
+                range_frame.pack(fill=tk.X, pady=5)
+                
+                min_range_label = tk.Label(range_frame, text='最小值:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                min_range_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                min_range_var = tk.StringVar(value='0')
+                min_range_entry = tk.Entry(range_frame, textvariable=min_range_var, width=10, font=('SimHei', 10))
+                min_range_entry.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                max_range_label = tk.Label(range_frame, text='最大值:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=10)
+                max_range_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                max_range_var = tk.StringVar(value='100')
+                max_range_entry = tk.Entry(range_frame, textvariable=max_range_var, width=10, font=('SimHei', 10))
+                max_range_entry.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            elif validation_type == '正则验证':
+                # 正则验证配置
+                regex_frame = tk.Frame(rule_detail_frame, bg='#ffffff')
+                regex_frame.pack(fill=tk.X, pady=5)
+                
+                regex_label = tk.Label(regex_frame, text='正则表达式:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                regex_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                regex_var = tk.StringVar(value='')
+                regex_entry = tk.Entry(regex_frame, textvariable=regex_var, width=40, font=('SimHei', 10))
+                regex_entry.pack(side=tk.LEFT, padx=5, pady=5)
+            
+        # 初始显示验证配置
+        show_validation_config()
+        
+        # 绑定验证类型变化事件
+        validation_type_combobox.bind('<<ComboboxSelected>>', lambda e: show_validation_config())
+        
+        # 规则状态
+        status_frame = tk.Frame(validation_config_frame, bg='#ffffff')
+        status_frame.pack(fill=tk.X, pady=10)
+        
+        status_label = tk.Label(status_frame, text='规则状态:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        status_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        status_var = tk.BooleanVar(value=True)
+        status_checkbox = tk.Checkbutton(status_frame, text='启用', variable=status_var, font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        status_checkbox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 底部按钮
+        button_frame = tk.Frame(right_frame, bg='#ffffff')
+        button_frame.pack(fill=tk.X, pady=20, padx=20)
+        
+        def save_rule():
+            """保存规则"""
+            # 这里可以添加保存规则的逻辑
+            messagebox.showinfo('成功', '验证规则已保存')
+            validation_window.destroy()
+        
+        save_btn = tk.Button(button_frame, text='保存', command=save_rule, width=12, height=2, bg='#007bff', fg='white', font=('SimHei', 10, 'bold'))
+        save_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        cancel_btn = tk.Button(button_frame, text='取消', command=validation_window.destroy, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        cancel_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+    
+    def preview_form(self):
+        """预览表单"""
+        # 创建预览窗口
+        preview_window = tk.Toplevel(self.root)
+        preview_window.title('表单预览')
+        preview_window.geometry('1000x600')
+        preview_window.resizable(True, True)
+        preview_window.configure(bg='#ffffff')
+        
+        # 预览窗口内容
+        main_frame = tk.Frame(preview_window, bg='#ffffff')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 表单标题
+        form_title = tk.Label(main_frame, text='采购订单预览', font=('SimHei', 16, 'bold'), bg='#ffffff', fg='#333333')
+        form_title.pack(pady=20, anchor=tk.CENTER)
+        
+        # 表单内容
+        form_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        form_frame.pack(fill=tk.BOTH, expand=True, pady=10, padx=20)
+        
+        # 模拟表单字段
+        fields = [
+            ('订单编号', 'PO-2026-001'),
+            ('供应商', '供应商A'),
+            ('采购日期', '2026-02-10'),
+            ('采购部门', '采购部'),
+            ('总金额', '10000.00')
+        ]
+        
+        for i, (label, value) in enumerate(fields):
+            field_frame = tk.Frame(form_frame, bg='#ffffff')
+            field_frame.pack(fill=tk.X, pady=10, padx=30)
+            
+            field_label = tk.Label(field_frame, text=label, font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+            field_label.pack(side=tk.LEFT, padx=10, pady=5)
+            
+            field_value = tk.Label(field_frame, text=value, font=('SimHei', 10), bg='#f8f9fa', fg='#333333', width=40, relief=tk.SUNKEN, bd=1)
+            field_value.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 底部按钮
+        button_frame = tk.Frame(main_frame, bg='#ffffff')
+        button_frame.pack(fill=tk.X, pady=20, padx=20)
+        
+        close_btn = tk.Button(button_frame, text='关闭', command=preview_window.destroy, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        close_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+
+    def open_display_condition_editor(self):
+        """打开显示条件编辑器"""
+        # 创建显示条件编辑器窗口
+        condition_window = tk.Toplevel(self.root)
+        condition_window.title('显示条件编辑器')
+        condition_window.geometry('800x600')
+        condition_window.resizable(True, True)
+        condition_window.configure(bg='#ffffff')
+        
+        # 显示条件编辑器内容
+        main_frame = tk.Frame(condition_window, bg='#ffffff')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 左侧：条件列表
+        left_frame = tk.Frame(main_frame, bg='#ffffff')
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, pady=10, padx=10)
+        
+        # 条件列表标题
+        condition_list_title = tk.Label(left_frame, text='显示条件列表', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        condition_list_title.pack(pady=10, padx=10, anchor=tk.W)
+        
+        # 条件列表
+        condition_list_frame = tk.Frame(left_frame, bg='#ffffff', relief=tk.SUNKEN, bd=1)
+        condition_list_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
+        
+        # 条件列表树
+        columns = ('name', 'type', 'field', 'status')
+        condition_tree = ttk.Treeview(condition_list_frame, columns=columns, show='headings', height=15)
+        condition_tree.heading('name', text='条件名称')
+        condition_tree.heading('type', text='条件类型')
+        condition_tree.heading('field', text='适用字段')
+        condition_tree.heading('status', text='状态')
+        
+        condition_tree.column('name', width=120)
+        condition_tree.column('type', width=100)
+        condition_tree.column('field', width=120)
+        condition_tree.column('status', width=60)
+        
+        condition_tree.pack(fill=tk.BOTH, expand=True)
+        
+        # 条件操作按钮
+        condition_buttons_frame = tk.Frame(left_frame, bg='#ffffff')
+        condition_buttons_frame.pack(fill=tk.X, pady=10, padx=10)
+        
+        add_condition_btn = tk.Button(condition_buttons_frame, text='添加条件', width=10, height=1, bg='#28a745', fg='white', font=('SimHei', 9, 'bold'))
+        add_condition_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        edit_condition_btn = tk.Button(condition_buttons_frame, text='编辑条件', width=10, height=1, bg='#007bff', fg='white', font=('SimHei', 9, 'bold'))
+        edit_condition_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        delete_condition_btn = tk.Button(condition_buttons_frame, text='删除条件', width=10, height=1, bg='#dc3545', fg='white', font=('SimHei', 9, 'bold'))
+        delete_condition_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 右侧：条件配置
+        right_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=10, padx=10)
+        
+        # 条件配置标题
+        config_title = tk.Label(right_frame, text='条件配置', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        config_title.pack(pady=10, padx=20, anchor=tk.W)
+        
+        # 条件基本信息
+        basic_info_frame = tk.Frame(right_frame, bg='#ffffff', relief=tk.FLAT, bd=1)
+        basic_info_frame.pack(fill=tk.X, pady=10, padx=20)
+        
+        # 条件名称
+        condition_name_frame = tk.Frame(basic_info_frame, bg='#ffffff')
+        condition_name_frame.pack(fill=tk.X, pady=5)
+        
+        condition_name_label = tk.Label(condition_name_frame, text='条件名称:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        condition_name_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        condition_name_var = tk.StringVar(value='新条件')
+        condition_name_entry = tk.Entry(condition_name_frame, textvariable=condition_name_var, width=40, font=('SimHei', 10))
+        condition_name_entry.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 条件类型
+        condition_type_frame = tk.Frame(basic_info_frame, bg='#ffffff')
+        condition_type_frame.pack(fill=tk.X, pady=5)
+        
+        condition_type_label = tk.Label(condition_type_frame, text='条件类型:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        condition_type_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        condition_types = ['字段值条件', '用户角色条件', '表达式条件', '组合条件']
+        condition_type_var = tk.StringVar(value=condition_types[0])
+        condition_type_combobox = ttk.Combobox(condition_type_frame, textvariable=condition_type_var, values=condition_types, width=20, font=('SimHei', 10))
+        condition_type_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 适用字段
+        field_frame = tk.Frame(basic_info_frame, bg='#ffffff')
+        field_frame.pack(fill=tk.X, pady=5)
+        
+        field_label = tk.Label(field_frame, text='适用字段:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        field_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        # 模拟字段列表
+        fields = ['订单编号', '供应商', '采购日期', '采购部门', '总金额']
+        field_var = tk.StringVar(value=fields[0] if fields else '')
+        field_combobox = ttk.Combobox(field_frame, textvariable=field_var, values=fields, width=20, font=('SimHei', 10))
+        field_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 条件配置
+        condition_config_frame = tk.Frame(right_frame, bg='#ffffff', relief=tk.FLAT, bd=1)
+        condition_config_frame.pack(fill=tk.X, pady=10, padx=20)
+        
+        # 条件配置标题
+        config_label = tk.Label(condition_config_frame, text='条件配置', font=('SimHei', 11, 'bold'), bg='#ffffff', fg='#333333')
+        config_label.pack(pady=10, anchor=tk.W)
+        
+        # 条件详情
+        condition_detail_frame = tk.Frame(condition_config_frame, bg='#ffffff')
+        condition_detail_frame.pack(fill=tk.X, pady=10)
+        
+        # 根据条件类型显示不同的配置选项
+        def show_condition_config():
+            """显示条件配置"""
+            # 清空现有配置
+            for widget in condition_detail_frame.winfo_children():
+                widget.destroy()
+            
+            condition_type = condition_type_var.get()
+            
+            if condition_type == '字段值条件':
+                # 字段值条件配置
+                field_value_frame = tk.Frame(condition_detail_frame, bg='#ffffff')
+                field_value_frame.pack(fill=tk.X, pady=5)
+                
+                # 比较字段
+                compare_field_label = tk.Label(field_value_frame, text='比较字段:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                compare_field_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                compare_fields = ['订单编号', '供应商', '采购日期', '采购部门', '总金额']
+                compare_field_var = tk.StringVar(value=compare_fields[0])
+                compare_field_combobox = ttk.Combobox(field_value_frame, textvariable=compare_field_var, values=compare_fields, width=15, font=('SimHei', 10))
+                compare_field_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                # 运算符
+                operator_label = tk.Label(field_value_frame, text='运算符:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=8)
+                operator_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                operators = ['等于', '不等于', '大于', '小于', '大于等于', '小于等于', '包含', '不包含']
+                operator_var = tk.StringVar(value=operators[0])
+                operator_combobox = ttk.Combobox(field_value_frame, textvariable=operator_var, values=operators, width=10, font=('SimHei', 10))
+                operator_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                # 比较值
+                compare_value_label = tk.Label(field_value_frame, text='比较值:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=8)
+                compare_value_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                compare_value_var = tk.StringVar(value='')
+                compare_value_entry = tk.Entry(field_value_frame, textvariable=compare_value_var, width=20, font=('SimHei', 10))
+                compare_value_entry.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            elif condition_type == '用户角色条件':
+                # 用户角色条件配置
+                role_frame = tk.Frame(condition_detail_frame, bg='#ffffff')
+                role_frame.pack(fill=tk.X, pady=5)
+                
+                role_label = tk.Label(role_frame, text='用户角色:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                role_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                roles = ['管理员', '采购人员', '财务人员', '销售人员', '普通用户']
+                role_var = tk.StringVar(value=roles[0])
+                role_combobox = ttk.Combobox(role_frame, textvariable=role_var, values=roles, width=15, font=('SimHei', 10))
+                role_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            elif condition_type == '表达式条件':
+                # 表达式条件配置
+                expression_frame = tk.Frame(condition_detail_frame, bg='#ffffff')
+                expression_frame.pack(fill=tk.X, pady=5)
+                
+                expression_label = tk.Label(expression_frame, text='表达式:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                expression_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                expression_var = tk.StringVar(value='')
+                expression_entry = tk.Entry(expression_frame, textvariable=expression_var, width=40, font=('SimHei', 10))
+                expression_entry.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                expression_hint = tk.Label(expression_frame, text='(例如: {字段1} > {字段2})', font=('SimHei', 9), bg='#ffffff', fg='#666666')
+                expression_hint.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 初始显示条件配置
+        show_condition_config()
+        
+        # 绑定条件类型变化事件
+        condition_type_combobox.bind('<<ComboboxSelected>>', lambda e: show_condition_config())
+        
+        # 条件状态
+        status_frame = tk.Frame(condition_config_frame, bg='#ffffff')
+        status_frame.pack(fill=tk.X, pady=10)
+        
+        status_label = tk.Label(status_frame, text='条件状态:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        status_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        status_var = tk.BooleanVar(value=True)
+        status_checkbox = tk.Checkbutton(status_frame, text='启用', variable=status_var, font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        status_checkbox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 底部按钮
+        button_frame = tk.Frame(right_frame, bg='#ffffff')
+        button_frame.pack(fill=tk.X, pady=20, padx=20)
+        
+        def save_condition():
+            """保存条件"""
+            # 这里可以添加保存条件的逻辑
+            messagebox.showinfo('成功', '显示条件已保存')
+            condition_window.destroy()
+        
+        save_btn = tk.Button(button_frame, text='保存', command=save_condition, width=12, height=2, bg='#007bff', fg='white', font=('SimHei', 10, 'bold'))
+        save_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        cancel_btn = tk.Button(button_frame, text='取消', command=condition_window.destroy, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        cancel_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+
+    def open_default_value_editor(self):
+        """打开默认值编辑器"""
+        # 创建默认值编辑器窗口
+        default_window = tk.Toplevel(self.root)
+        default_window.title('默认值编辑器')
+        default_window.geometry('700x500')
+        default_window.resizable(True, True)
+        default_window.configure(bg='#ffffff')
+        
+        # 默认值编辑器内容
+        main_frame = tk.Frame(default_window, bg='#ffffff')
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 左侧：默认值列表
+        left_frame = tk.Frame(main_frame, bg='#ffffff')
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, pady=10, padx=10)
+        
+        # 默认值列表标题
+        default_list_title = tk.Label(left_frame, text='默认值列表', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        default_list_title.pack(pady=10, padx=10, anchor=tk.W)
+        
+        # 默认值列表
+        default_list_frame = tk.Frame(left_frame, bg='#ffffff', relief=tk.SUNKEN, bd=1)
+        default_list_frame.pack(fill=tk.BOTH, expand=True, pady=5, padx=10)
+        
+        # 默认值列表树
+        columns = ('field', 'type', 'value', 'status')
+        default_tree = ttk.Treeview(default_list_frame, columns=columns, show='headings', height=15)
+        default_tree.heading('field', text='字段名称')
+        default_tree.heading('type', text='默认值类型')
+        default_tree.heading('value', text='默认值')
+        default_tree.heading('status', text='状态')
+        
+        default_tree.column('field', width=120)
+        default_tree.column('type', width=100)
+        default_tree.column('value', width=120)
+        default_tree.column('status', width=60)
+        
+        default_tree.pack(fill=tk.BOTH, expand=True)
+        
+        # 默认值操作按钮
+        default_buttons_frame = tk.Frame(left_frame, bg='#ffffff')
+        default_buttons_frame.pack(fill=tk.X, pady=10, padx=10)
+        
+        add_default_btn = tk.Button(default_buttons_frame, text='添加默认值', width=10, height=1, bg='#28a745', fg='white', font=('SimHei', 9, 'bold'))
+        add_default_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        edit_default_btn = tk.Button(default_buttons_frame, text='编辑默认值', width=10, height=1, bg='#007bff', fg='white', font=('SimHei', 9, 'bold'))
+        edit_default_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        delete_default_btn = tk.Button(default_buttons_frame, text='删除默认值', width=10, height=1, bg='#dc3545', fg='white', font=('SimHei', 9, 'bold'))
+        delete_default_btn.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 右侧：默认值配置
+        right_frame = tk.Frame(main_frame, bg='#ffffff', relief=tk.RAISED, bd=1)
+        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=10, padx=10)
+        
+        # 默认值配置标题
+        config_title = tk.Label(right_frame, text='默认值配置', font=('SimHei', 12, 'bold'), bg='#ffffff', fg='#333333')
+        config_title.pack(pady=10, padx=20, anchor=tk.W)
+        
+        # 默认值基本信息
+        basic_info_frame = tk.Frame(right_frame, bg='#ffffff', relief=tk.FLAT, bd=1)
+        basic_info_frame.pack(fill=tk.X, pady=10, padx=20)
+        
+        # 目标字段
+        target_field_frame = tk.Frame(basic_info_frame, bg='#ffffff')
+        target_field_frame.pack(fill=tk.X, pady=5)
+        
+        target_field_label = tk.Label(target_field_frame, text='目标字段:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        target_field_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        # 模拟字段列表
+        fields = ['订单编号', '供应商', '采购日期', '采购部门', '总金额']
+        target_field_var = tk.StringVar(value=fields[0] if fields else '')
+        target_field_combobox = ttk.Combobox(target_field_frame, textvariable=target_field_var, values=fields, width=20, font=('SimHei', 10))
+        target_field_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 默认值类型
+        default_type_frame = tk.Frame(basic_info_frame, bg='#ffffff')
+        default_type_frame.pack(fill=tk.X, pady=5)
+        
+        default_type_label = tk.Label(default_type_frame, text='默认值类型:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        default_type_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        default_types = ['静态值', '动态值', '表达式', '系统变量', '当前日期', '当前用户']
+        default_type_var = tk.StringVar(value=default_types[0])
+        default_type_combobox = ttk.Combobox(default_type_frame, textvariable=default_type_var, values=default_types, width=20, font=('SimHei', 10))
+        default_type_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 默认值配置
+        default_config_frame = tk.Frame(right_frame, bg='#ffffff', relief=tk.FLAT, bd=1)
+        default_config_frame.pack(fill=tk.X, pady=10, padx=20)
+        
+        # 默认值配置标题
+        config_label = tk.Label(default_config_frame, text='默认值配置', font=('SimHei', 11, 'bold'), bg='#ffffff', fg='#333333')
+        config_label.pack(pady=10, anchor=tk.W)
+        
+        # 默认值详情
+        default_detail_frame = tk.Frame(default_config_frame, bg='#ffffff')
+        default_detail_frame.pack(fill=tk.X, pady=10)
+        
+        # 根据默认值类型显示不同的配置选项
+        def show_default_config():
+            """显示默认值配置"""
+            # 清空现有配置
+            for widget in default_detail_frame.winfo_children():
+                widget.destroy()
+            
+            default_type = default_type_var.get()
+            
+            if default_type == '静态值':
+                # 静态值配置
+                static_frame = tk.Frame(default_detail_frame, bg='#ffffff')
+                static_frame.pack(fill=tk.X, pady=5)
+                
+                static_label = tk.Label(static_frame, text='静态值:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                static_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                static_var = tk.StringVar(value='')
+                static_entry = tk.Entry(static_frame, textvariable=static_var, width=40, font=('SimHei', 10))
+                static_entry.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            elif default_type == '表达式':
+                # 表达式配置
+                expression_frame = tk.Frame(default_detail_frame, bg='#ffffff')
+                expression_frame.pack(fill=tk.X, pady=5)
+                
+                expression_label = tk.Label(expression_frame, text='表达式:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                expression_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                expression_var = tk.StringVar(value='')
+                expression_entry = tk.Entry(expression_frame, textvariable=expression_var, width=40, font=('SimHei', 10))
+                expression_entry.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                expression_hint = tk.Label(expression_frame, text='(例如: {字段1} + {字段2})', font=('SimHei', 9), bg='#ffffff', fg='#666666')
+                expression_hint.pack(side=tk.LEFT, padx=5, pady=5)
+            
+            elif default_type == '系统变量':
+                # 系统变量配置
+                system_var_frame = tk.Frame(default_detail_frame, bg='#ffffff')
+                system_var_frame.pack(fill=tk.X, pady=5)
+                
+                system_var_label = tk.Label(system_var_frame, text='系统变量:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+                system_var_label.pack(side=tk.LEFT, padx=10, pady=5)
+                
+                system_vars = ['当前用户ID', '当前用户名', '当前部门', '当前日期时间', '系统时间戳']
+                system_var_var = tk.StringVar(value=system_vars[0])
+                system_var_combobox = ttk.Combobox(system_var_frame, textvariable=system_var_var, values=system_vars, width=20, font=('SimHei', 10))
+                system_var_combobox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 初始显示默认值配置
+        show_default_config()
+        
+        # 绑定默认值类型变化事件
+        default_type_combobox.bind('<<ComboboxSelected>>', lambda e: show_default_config())
+        
+        # 默认值状态
+        status_frame = tk.Frame(default_config_frame, bg='#ffffff')
+        status_frame.pack(fill=tk.X, pady=10)
+        
+        status_label = tk.Label(status_frame, text='默认值状态:', font=('SimHei', 10), bg='#ffffff', fg='#333333', width=12)
+        status_label.pack(side=tk.LEFT, padx=10, pady=5)
+        
+        status_var = tk.BooleanVar(value=True)
+        status_checkbox = tk.Checkbutton(status_frame, text='启用', variable=status_var, font=('SimHei', 10), bg='#ffffff', fg='#333333')
+        status_checkbox.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # 底部按钮
+        button_frame = tk.Frame(right_frame, bg='#ffffff')
+        button_frame.pack(fill=tk.X, pady=20, padx=20)
+        
+        def save_default():
+            """保存默认值"""
+            # 这里可以添加保存默认值的逻辑
+            messagebox.showinfo('成功', '默认值已保存')
+            default_window.destroy()
+        
+        save_btn = tk.Button(button_frame, text='保存', command=save_default, width=12, height=2, bg='#007bff', fg='white', font=('SimHei', 10, 'bold'))
+        save_btn.pack(side=tk.RIGHT, padx=10, pady=5)
+        
+        cancel_btn = tk.Button(button_frame, text='取消', command=default_window.destroy, width=12, height=2, bg='#6c757d', fg='white', font=('SimHei', 10, 'bold'))
+        cancel_btn.pack(side=tk.RIGHT, padx=10, pady=5)
 
 if __name__ == '__main__':
     app = MetadataEditor()
