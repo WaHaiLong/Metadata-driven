@@ -11,6 +11,7 @@ class MetadataEditor:
         self.modules = {}
         self.current_module = None
         self.current_form = None
+        self.dragged_control = None  # 存储当前拖拽的控件名称
         
         self.create_widgets()
         self.load_metadata()
@@ -406,6 +407,9 @@ class MetadataEditor:
         
         self.scrollable_frame.bind('<Configure>', on_configure)
         
+        # 设置拖拽和释放事件
+        self.setup_drag_and_drop()
+        
         # 供货信息标签页内容
         supply_label = tk.Label(supply_tab, text='供货信息配置', font=('SimHei', 10), bg='#ffffff', fg='#666666')
         supply_label.pack(pady=20, padx=20, anchor=tk.W)
@@ -559,16 +563,101 @@ class MetadataEditor:
         item = self.control_tree.identify_row(event.y)
         if item:
             self.control_tree.selection_set(item)
+            # 记录点击的控件信息
+            tags = self.control_tree.item(item, 'tags')
+            if len(tags) == 2:
+                self.dragged_control = tags[1]  # 存储当前拖拽的控件名称
+                print(f'准备拖拽控件: {self.dragged_control}')
     
     def on_control_drag(self, event):
         """控件拖拽事件"""
-        item = self.control_tree.identify_row(event.y)
-        if item:
-            tags = self.control_tree.item(item, 'tags')
-            if len(tags) == 2:
-                category, control = tags
-                # 这里可以实现拖拽到设计区域的逻辑
-                print(f'拖拽控件: {control}')
+        # 这里可以添加拖拽视觉反馈
+        pass
+    
+    def setup_drag_and_drop(self):
+        """设置拖拽和释放事件"""
+        # 在控件树上添加鼠标按下事件
+        self.control_tree.bind('<Button-1>', self.on_control_click)
+        # 在控件树上添加鼠标移动事件
+        self.control_tree.bind('<B1-Motion>', self.on_control_drag)
+        # 在设计区域添加鼠标释放事件
+        self.scrollable_frame.bind('<ButtonRelease-1>', self.on_design_area_drop)
+    
+    def on_design_area_drop(self, event):
+        """在设计区域释放控件"""
+        if hasattr(self, 'dragged_control') and self.dragged_control:
+            # 获取当前选择的模块和单据
+            if self.current_module and self.current_form:
+                # 创建新字段
+                print(f'在设计区域释放控件: {self.dragged_control}')
+                self.add_field_from_control(self.dragged_control)
+                # 重置拖拽状态
+                self.dragged_control = None
+            else:
+                print('请先选择一个模块和单据')
+        else:
+            print('没有拖拽的控件')
+    
+    def add_field_from_control(self, control_name):
+        """根据拖拽的控件名称添加对应的字段"""
+        # 控件类型映射
+        control_type_map = {
+            '文本框': 'TextField',
+            '多行文本': 'TextField',
+            '密码框': 'TextField',
+            '下拉框': 'ComboBox',
+            '日期选择器': 'TextField',
+            '标签': 'TextField',
+            '复选框': 'TextField',
+            '单选按钮': 'TextField',
+            '按钮': 'TextField',
+            '表格': 'TextField',
+            '列表框': 'TextField',
+            '树形控件': 'TextField',
+            '图表': 'TextField',
+            '正则验证': 'TextField',
+            '范围验证': 'TextField',
+            '自定义验证': 'TextField',
+            '颜色选择器': 'TextField',
+            '文件上传': 'TextField',
+            '富文本编辑器': 'TextField',
+            '地图控件': 'TextField'
+        }
+        
+        # 获取对应的字段类型
+        field_type = control_type_map.get(control_name, 'TextField')
+        
+        # 添加新字段
+        row = len(self.fields)
+        field_name = f'{control_name}{row+1}'
+        
+        field_frame = tk.Frame(self.scrollable_frame, relief=tk.RAISED, bd=1, bg='#f8f9fa')
+        field_frame.grid(row=row, column=0, columnspan=6, padx=10, pady=10, sticky=tk.W+tk.E)
+        
+        name_var = tk.StringVar(value=field_name)
+        type_var = tk.StringVar(value=field_type)
+        
+        tk.Label(field_frame, text='字段名称:', font=('SimHei', 10), bg='#f8f9fa', width=10).grid(row=0, column=0, padx=10, pady=5, sticky=tk.W)
+        tk.Entry(field_frame, textvariable=name_var, width=25, font=('SimHei', 10)).grid(row=0, column=1, padx=10, pady=5, sticky=tk.W)
+        
+        tk.Label(field_frame, text='字段类型:', font=('SimHei', 10), bg='#f8f9fa', width=10).grid(row=0, column=2, padx=10, pady=5, sticky=tk.W)
+        ttk.Combobox(field_frame, textvariable=type_var, values=['TextField', 'ComboBox', 'MoneyField'], width=18, font=('SimHei', 10)).grid(row=0, column=3, padx=10, pady=5, sticky=tk.W)
+        
+        var = tk.BooleanVar(value=False)
+        checkbox = tk.Checkbutton(field_frame, text='选中', variable=var, font=('SimHei', 10), bg='#f8f9fa')
+        checkbox.var = var
+        checkbox.grid(row=0, column=4, padx=10, pady=5, sticky=tk.W)
+        
+        # 编辑按钮
+        edit_btn = tk.Button(field_frame, text='编辑', width=8, height=1, bg='#17a2b8', fg='white', font=('SimHei', 9, 'bold'), command=lambda nv=name_var: self.edit_field(nv.get()))
+        edit_btn.grid(row=0, column=5, padx=10, pady=5, sticky=tk.E)
+        
+        self.fields[name_var.get()] = {
+            'type': type_var,
+            'name': name_var,
+            'checkbox': checkbox
+        }
+        self.field_frames[name_var.get()] = field_frame
     
     def search_controls(self):
         """搜索控件"""

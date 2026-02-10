@@ -327,8 +327,23 @@ class MDAFormEngine:
                     self.form_title_label.config(text=f'{original_text} - 加载中...')
                     self.root.update()  # 强制更新界面
                 
-                # 重新切换到当前表单，触发数据列表刷新
-                self.switch_form(self.current_module, self.current_form)
+                # 清空fields_frame并重新渲染表格
+                if hasattr(self, 'fields_frame'):
+                    # 清空现有内容
+                    for widget in self.fields_frame.winfo_children():
+                        widget.destroy()
+                    
+                    # 加载并显示实际数据列表
+                    filename = f'data_{self.current_module}_{self.current_form}.json'
+                    records = self.get_records(filename)
+                    
+                    if records:
+                        # 显示数据列表
+                        self.render_table(records)
+                    else:
+                        # 显示空数据提示
+                        empty_data = [{'提示': '暂无数据，请点击新增按钮添加记录'}]
+                        self.render_table(empty_data)
                 
                 # 恢复原始标题
                 if hasattr(self, 'form_title_label'):
@@ -374,8 +389,56 @@ class MDAFormEngine:
         """添加新记录"""
         # 重置表单，准备添加新记录
         self.reset_form()
-        # 显示字段区域，让用户输入新记录数据
+        # 清空fields_frame并显示字段编辑区域
         if hasattr(self, 'fields_frame'):
+            # 清空现有内容
+            for widget in self.fields_frame.winfo_children():
+                widget.destroy()
+            
+            # 创建字段容器
+            fields_container = tk.Frame(self.fields_frame, bg='#ffffff')
+            fields_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            
+            # 为每个字段创建一行
+            for field_name, field_info in self.fields.items():
+                if not self.is_visible(field_info['visible_ext']):
+                    continue
+                
+                # 创建行框架
+                field_row = tk.Frame(fields_container, bg='#ffffff')
+                field_row.pack(fill=tk.X, pady=8, padx=10)
+                
+                # 字段标签
+                label_frame = tk.Frame(field_row, bg='#ffffff')
+                label_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y)
+                label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15, fg='#333333')
+                label.pack(pady=2, anchor=tk.W)
+                
+                # 字段输入控件
+                input_frame = tk.Frame(field_row, bg='#ffffff')
+                input_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y, expand=True)
+                
+                if field_info['type'] == 'TextField':
+                    if field_info['height'] > 30:
+                        text_widget = tk.Text(input_frame, wrap=tk.WORD, width=50, height=4, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                        text_widget.pack(pady=2, fill=tk.X, expand=True)
+                        text_widget.bind('<KeyRelease>', lambda e, w=text_widget, l=field_info['length']: self.limit_text(w, l))
+                        self.field_widgets[field_name] = text_widget
+                    else:
+                        entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                        entry.pack(pady=2, fill=tk.X, expand=True)
+                        entry.bind('<KeyRelease>', lambda e, w=entry, l=field_info['length']: self.limit_text(w, l))
+                        self.field_widgets[field_name] = entry
+                elif field_info['type'] == 'ComboBox':
+                    combobox = ttk.Combobox(input_frame, values=field_info['options'], width=48, font=('SimHei', 10))
+                    combobox.pack(pady=2, fill=tk.X, expand=True)
+                    self.field_widgets[field_name] = combobox
+                elif field_info['type'] == 'MoneyField':
+                    entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                    entry.pack(pady=2, fill=tk.X, expand=True)
+                    self.field_widgets[field_name] = entry
+            
+            # 显示字段区域
             self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
     
     def update_record(self, record_id):
@@ -675,62 +738,19 @@ class MDAFormEngine:
                 empty_data = [{'提示': '暂无数据，请点击新增按钮添加记录'}]
                 self.render_table(empty_data)
             
-            # 渲染字段（默认隐藏，点击编辑时显示）
+            # 先渲染字段（默认不显示）
             self.render_fields()
-            # 隐藏字段区域
-            if hasattr(self, 'fields_frame'):
-                self.fields_frame.pack_forget()
+            # 隐藏字段编辑区域，但保持表格显示
+            # 注意：不再隐藏整个fields_frame，因为表格也在其中
+            # 而是在点击编辑时再显示字段编辑区域
     
     def render_fields(self):
         """渲染字段"""
         # 只有在UI初始化后才渲染字段
         if hasattr(self, 'fields_frame'):
-            # 清空现有内容
-            for widget in self.fields_frame.winfo_children():
-                widget.destroy()
-            
-            # 创建字段容器
-            fields_container = tk.Frame(self.fields_frame, bg='#ffffff')
-            fields_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-            
-            # 为每个字段创建一行
-            for field_name, field_info in self.fields.items():
-                if not self.is_visible(field_info['visible_ext']):
-                    continue
-                
-                # 创建行框架
-                field_row = tk.Frame(fields_container, bg='#ffffff')
-                field_row.pack(fill=tk.X, pady=8, padx=10)
-                
-                # 字段标签
-                label_frame = tk.Frame(field_row, bg='#ffffff')
-                label_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y)
-                label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15, fg='#333333')
-                label.pack(pady=2, anchor=tk.W)
-                
-                # 字段输入控件
-                input_frame = tk.Frame(field_row, bg='#ffffff')
-                input_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y, expand=True)
-                
-                if field_info['type'] == 'TextField':
-                    if field_info['height'] > 30:
-                        text_widget = tk.Text(input_frame, wrap=tk.WORD, width=50, height=4, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
-                        text_widget.pack(pady=2, fill=tk.X, expand=True)
-                        text_widget.bind('<KeyRelease>', lambda e, w=text_widget, l=field_info['length']: self.limit_text(w, l))
-                        self.field_widgets[field_name] = text_widget
-                    else:
-                        entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
-                        entry.pack(pady=2, fill=tk.X, expand=True)
-                        entry.bind('<KeyRelease>', lambda e, w=entry, l=field_info['length']: self.limit_text(w, l))
-                        self.field_widgets[field_name] = entry
-                elif field_info['type'] == 'ComboBox':
-                    combobox = ttk.Combobox(input_frame, values=field_info['options'], width=48, font=('SimHei', 10))
-                    combobox.pack(pady=2, fill=tk.X, expand=True)
-                    self.field_widgets[field_name] = combobox
-                elif field_info['type'] == 'MoneyField':
-                    entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
-                    entry.pack(pady=2, fill=tk.X, expand=True)
-                    self.field_widgets[field_name] = entry
+            # 注意：不再清空现有内容，因为表格也在fields_frame中
+            # 而是在需要编辑时再显示字段编辑区域
+            pass
     
     def render_table(self, data):
         """渲染表格数据"""
@@ -967,8 +987,57 @@ class MDAFormEngine:
         if tags:
             record_id = tags[0]
             if record_id:
-                # 显示字段区域
-                self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+                # 清空fields_frame并显示字段编辑区域
+                if hasattr(self, 'fields_frame'):
+                    # 清空现有内容
+                    for widget in self.fields_frame.winfo_children():
+                        widget.destroy()
+                    
+                    # 创建字段容器
+                    fields_container = tk.Frame(self.fields_frame, bg='#ffffff')
+                    fields_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+                    
+                    # 为每个字段创建一行
+                    for field_name, field_info in self.fields.items():
+                        if not self.is_visible(field_info['visible_ext']):
+                            continue
+                        
+                        # 创建行框架
+                        field_row = tk.Frame(fields_container, bg='#ffffff')
+                        field_row.pack(fill=tk.X, pady=8, padx=10)
+                        
+                        # 字段标签
+                        label_frame = tk.Frame(field_row, bg='#ffffff')
+                        label_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y)
+                        label = tk.Label(label_frame, text=field_name, font=('SimHei', 10), bg='#ffffff', anchor=tk.W, width=15, fg='#333333')
+                        label.pack(pady=2, anchor=tk.W)
+                        
+                        # 字段输入控件
+                        input_frame = tk.Frame(field_row, bg='#ffffff')
+                        input_frame.pack(side=tk.LEFT, padx=10, pady=2, fill=tk.Y, expand=True)
+                        
+                        if field_info['type'] == 'TextField':
+                            if field_info['height'] > 30:
+                                text_widget = tk.Text(input_frame, wrap=tk.WORD, width=50, height=4, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                                text_widget.pack(pady=2, fill=tk.X, expand=True)
+                                text_widget.bind('<KeyRelease>', lambda e, w=text_widget, l=field_info['length']: self.limit_text(w, l))
+                                self.field_widgets[field_name] = text_widget
+                            else:
+                                entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                                entry.pack(pady=2, fill=tk.X, expand=True)
+                                entry.bind('<KeyRelease>', lambda e, w=entry, l=field_info['length']: self.limit_text(w, l))
+                                self.field_widgets[field_name] = entry
+                        elif field_info['type'] == 'ComboBox':
+                            combobox = ttk.Combobox(input_frame, values=field_info['options'], width=48, font=('SimHei', 10))
+                            combobox.pack(pady=2, fill=tk.X, expand=True)
+                            self.field_widgets[field_name] = combobox
+                        elif field_info['type'] == 'MoneyField':
+                            entry = tk.Entry(input_frame, width=50, font=('SimHei', 10), relief=tk.SOLID, bd=1, bg='#ffffff')
+                            entry.pack(pady=2, fill=tk.X, expand=True)
+                            self.field_widgets[field_name] = entry
+                    
+                    # 显示字段区域
+                    self.fields_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
                 # 加载记录数据
                 self.load_data(record_id)
             else:
